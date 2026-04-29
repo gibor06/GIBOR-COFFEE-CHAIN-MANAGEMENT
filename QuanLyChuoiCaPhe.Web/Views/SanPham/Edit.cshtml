@@ -1,0 +1,54 @@
+@model SanPham
+@{
+    ViewData["Title"] = "Sửa Sản phẩm";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-pencil"></i> Sửa Sản phẩm</h2>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                <input asp-for="MaSanPham" type="hidden" />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="TenSanPham" class="form-label">Tên sản phẩm</label>
+                        <input asp-for="TenSanPham" class="form-control" />
+                        <span asp-validation-for="TenSanPham" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="MaDanhMuc" class="form-label">Danh mục</label>
+                        <select asp-for="MaDanhMuc" class="form-select" asp-items="ViewBag.DanhMucs"></select>
+                        <span asp-validation-for="MaDanhMuc" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="GiaCoBan" class="form-label">Giá</label>
+                        <input asp-for="GiaCoBan" type="number" step="1000" class="form-control" />
+                        <span asp-validation-for="GiaCoBan" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3 form-check mt-4">
+                        <input asp-for="TrangThai" class="form-check-input" />
+                        <label asp-for="TrangThai" class="form-check-label">Đang bán</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="MoTa" class="form-label">Mô Tả</label>
+                    <textarea asp-for="MoTa" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="MoTa" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn btn-coffee">
+                    <i class="bi bi-save"></i> Cập nhật
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Hủy
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

@@ -1,0 +1,140 @@
+@model IEnumerable<ThongTinNhanVien>
+@{
+    ViewData["Title"] = "Quản lý Nhân viên";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-people"></i> Quản lý Nhân viên</h2>
+        <a asp-action="Create" class="btn btn-coffee">
+            <i class="bi bi-plus-circle"></i> Thêm nhân viên
+        </a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm kiếm..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-3">
+                    <select name="chiNhanh" class="form-select">
+                        <option value="">-- Tất cả chi nhánh --</option>
+                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                        {
+                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="chucVu" class="form-select">
+                        <option value="">-- Tất cả chức vụ --</option>
+                        @foreach (var cv in ViewBag.ChucVus as List<ChucVuNhanVien>)
+                        {
+                            <option value="@cv.MaChucVu" selected="@(ViewBag.ChucVu == cv.MaChucVu)">@cv.TenChucVu</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        <option value="true" selected="@(ViewBag.TrangThai == true)">Đang làm</option>
+                        <option value="false" selected="@(ViewBag.TrangThai == false)">Nghỉ việc</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Tìm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã NV</th>
+                            <th>Họ tên</th>
+                            <th>Chức vụ</th>
+                            <th>Chi nhánh</th>
+                            <th>Loại NV</th>
+                            <th>SĐT</th>
+                            <th>Email</th>
+                            <th>Ngày vào làm</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.MaNV</td>
+                                <td><strong>@item.HoTenNV</strong></td>
+                                <td>@item.ChucVuNhanVien.TenChucVu</td>
+                                <td>@item.ChiNhanh.TenChiNhanh</td>
+                                <td>
+                                    @if (item.LoaiNV == 1)
+                                    {
+                                        <span class="badge bg-primary">Fulltime</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">Parttime</span>
+                                    }
+                                </td>
+                                <td>@item.SoDienThoai</td>
+                                <td>@item.Email</td>
+                                <td>@item.NgayVaoLam.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    @if (item.TrangThai)
+                                    {
+                                        <span class="badge bg-success">Đang làm</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Nghỉ việc</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.MaNV" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    @if (item.TrangThai)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="nghiViec('@item.MaNV')">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function nghiViec(id) {
+            if (confirm('Bạn có chắc muốn cho nhân viên này nghỉ việc?')) {
+                fetch('/NhanVien/NghiViec?id=' + id, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+    </script>
+}

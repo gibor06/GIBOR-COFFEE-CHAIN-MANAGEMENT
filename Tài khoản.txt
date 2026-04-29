@@ -1,0 +1,26 @@
+Tài khoản
+Trần Gia Bảo:
+	- Vai trò: admin
+	- tk: trangiabao
+	- mk: 123123
+
+Lê Quang Bảo:
+	- Vai trò: quản lý
+	- tk: lequangbao
+	- mk: 123123
+
+Trần Dương Gia Bảo:
+	- Vai trò: nhân viên
+	- tk: tranduonggiabao
+	- mk: 123123
+
+Nguyễn Ngọc Châu:
+	- Vai trò: kế toán
+	- tk: nguyenngocchau
+	- mk: 123123
+
+Nguyễn Thế Anh:
+	- Vai trò: kho
+	- tk: nguyentheanh
+	- mk: 123123
+

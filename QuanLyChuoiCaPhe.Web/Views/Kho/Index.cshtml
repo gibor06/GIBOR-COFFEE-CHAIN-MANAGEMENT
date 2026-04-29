@@ -1,0 +1,93 @@
+@model IEnumerable<TonKhoNguyenLieu>
+@{
+    ViewData["Title"] = "Tồn kho Nguyên liệu";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-box-seam"></i> Tồn kho Nguyên liệu</h2>
+        <div>
+            <a asp-action="GiaoDich" class="btn btn-coffee">
+                <i class="bi bi-arrow-left-right"></i> Giao dịch kho
+            </a>
+            <a asp-action="CanhBao" class="btn btn-warning">
+                <i class="bi bi-exclamation-triangle"></i> Cảnh báo
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <select name="chiNhanh" class="form-select">
+                        <option value="">-- Tất cả chi nhánh --</option>
+                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                        {
+                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Chi nhánh</th>
+                            <th>Nguyên liệu</th>
+                            <th>Đơn vị tính</th>
+                            <th>Số lượng tồn</th>
+                            <th>Mức cảnh báo</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="@(item.SoLuongTon <= item.MucCanhBao ? "table-warning" : "")">
+                                <td>@item.ChiNhanh?.TenChiNhanh</td>
+                                <td><strong>@item.NguyenLieu?.TenNguyenLieu</strong></td>
+                                <td>@item.NguyenLieu?.DonViTinh</td>
+                                <td>@item.SoLuongTon.ToString("N2")</td>
+                                <td>@item.MucCanhBao.ToString("N2")</td>
+                                <td>
+                                    @if (item.SoLuongTon <= item.MucCanhBao)
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-triangle"></i> Cần nhập
+                                        </span>
+                                    }
+                                    else if (item.SoLuongTon <= item.MucCanhBao * 1.5m)
+                                    {
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-exclamation-circle"></i> Sắp hết
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Đủ
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

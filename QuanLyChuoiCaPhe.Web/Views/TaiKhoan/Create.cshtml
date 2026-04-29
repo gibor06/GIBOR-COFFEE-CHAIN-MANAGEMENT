@@ -1,0 +1,120 @@
+@model HeThongTaiKhoan
+@{
+    ViewData["Title"] = "Thêm tài khoản";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-person-badge"></i> Thêm tài khoản</h2>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="TenDangNhap" class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input asp-for="TenDangNhap" class="form-control" placeholder="Nhập tên đăng nhập" />
+                            <span asp-validation-for="TenDangNhap" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="VaiTro" class="form-label">Vai trò <span class="text-danger">*</span></label>
+                            <select asp-for="VaiTro" class="form-select" id="vaiTroSelect">
+                                <option value="">-- Chọn vai trò --</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="QUAN_LY">QUAN_LY</option>
+                                <option value="NHAN_VIEN">NHAN_VIEN</option>
+                                <option value="KHO">KHO</option>
+                                <option value="KE_TOAN">KE_TOAN</option>
+                            </select>
+                            <span asp-validation-for="VaiTro" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label class="form-label">Liên kết với nhân viên</label>
+                            <select name="maNV" class="form-select" id="nhanVienSelect">
+                                <option value="">-- Không liên kết (tài khoản hệ thống) --</option>
+                                @if (ViewBag.NhanViens != null)
+                                {
+                                    @foreach (var nv in ViewBag.NhanViens as List<ThongTinNhanVien>)
+                                    {
+                                        <option value="@nv.MaNV">@nv.MaNV - @nv.HoTenNV (@nv.ChiNhanh.TenChiNhanh)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="MatKhauHash" class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" asp-for="MatKhauHash" class="form-control" placeholder="Nhập mật khẩu" />
+                            <span asp-validation-for="MatKhauHash" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Xác nhận mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" id="confirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" />
+                            <span id="confirmPasswordError" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="TrangThai" class="form-check-input" type="checkbox" checked />
+                                <label asp-for="TrangThai" class="form-check-label">
+                                    Kích hoạt tài khoản
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-coffee">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Hủy
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.querySelector('[name="MatKhauHash"]').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorSpan = document.getElementById('confirmPasswordError');
+
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                errorSpan.textContent = 'Mật khẩu xác nhận không khớp!';
+                return false;
+            }
+            errorSpan.textContent = '';
+        });
+    </script>
+}

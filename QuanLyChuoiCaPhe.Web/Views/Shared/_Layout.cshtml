@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Quản Lý Chuỗi Cà Phê</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @if (Context.Session.GetString("MaTK") != null)
+    {
+        <div class="wrapper">
+            <!-- Sidebar -->
+            <partial name="_Sidebar" />
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Header -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+                    <div class="container-fluid">
+                        <button class="btn btn-link" id="sidebarToggle">
+                            <i class="bi bi-list fs-4"></i>
+                        </button>
+                        <span class="navbar-brand mb-0 h1">@ViewData["Title"]</span>
+                        <div class="ms-auto d-flex align-items-center">
+                            <span class="me-3">
+                                <i class="bi bi-person-circle"></i>
+                                @Context.Session.GetString("TenDangNhap")
+                                <span class="badge bg-coffee">@Context.Session.GetString("VaiTro")</span>
+                            </span>
+                            <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-warning btn-sm me-2" title="Đổi mật khẩu">
+                                <i class="bi bi-key"></i>
+                            </a>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Alert Messages -->
+                <partial name="_Alert" />
+
+                <!-- Page Content -->
+                <div class="content-wrapper">
+                    @RenderBody()
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @RenderBody()
+    }
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

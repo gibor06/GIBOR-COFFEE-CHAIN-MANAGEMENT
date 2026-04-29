@@ -1,0 +1,53 @@
+@model BangLuongCreateViewModel
+@{
+    ViewData["Title"] = "Khởi tạo Bảng lương";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-plus-circle"></i> Khởi tạo Bảng lương</h2>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Lưu ý:</strong> Hệ thống sẽ tự động tính lương cho tất cả nhân viên dựa trên dữ liệu chấm công trong tháng.
+            </div>
+
+            <form asp-action="KhoiTao" method="post">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tháng</label>
+                        <select asp-for="Thang" class="form-select">
+                            @for (byte i = 1; i <= 12; i++)
+                            {
+                                <option value="@i">Tháng @i</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Thang" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Năm</label>
+                        <select asp-for="Nam" class="form-select">
+                            @for (short i = 2024; i <= 2030; i++)
+                            {
+                                <option value="@i">@i</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Nam" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-coffee" onclick="return confirm('Bạn có chắc muốn khởi tạo bảng lương?')">
+                    <i class="bi bi-play-circle"></i> Khởi tạo
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Quay lại
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

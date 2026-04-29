@@ -1,0 +1,164 @@
+@model IEnumerable<HeThongTaiKhoan>
+@{
+    ViewData["Title"] = "Quản lý Tài khoản";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-person-badge"></i> Quản lý Tài khoản</h2>
+        <a asp-action="Create" class="btn btn-coffee">
+            <i class="bi bi-plus-circle"></i> Thêm tài khoản
+        </a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm kiếm..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-3">
+                    <select name="vaiTro" class="form-select">
+                        <option value="">-- Tất cả vai trò --</option>
+                        <option value="ADMIN" selected="@(ViewBag.VaiTro == "ADMIN")">ADMIN</option>
+                        <option value="QUAN_LY" selected="@(ViewBag.VaiTro == "QUAN_LY")">QUAN_LY</option>
+                        <option value="NHAN_VIEN" selected="@(ViewBag.VaiTro == "NHAN_VIEN")">NHAN_VIEN</option>
+                        <option value="KHO" selected="@(ViewBag.VaiTro == "KHO")">KHO</option>
+                        <option value="KE_TOAN" selected="@(ViewBag.VaiTro == "KE_TOAN")">KE_TOAN</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="true" selected="@(ViewBag.TrangThai == true)">Hoạt động</option>
+                        <option value="false" selected="@(ViewBag.TrangThai == false)">Khóa</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Tìm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã TK</th>
+                            <th>Tên đăng nhập</th>
+                            <th>Vai trò</th>
+                            <th>Nhân viên</th>
+                            <th>Ngày tạo</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var nhanVien = item.TaiKhoanNhanViens.FirstOrDefault()?.ThongTinNhanVien;
+                            <tr>
+                                <td>@item.MaTK</td>
+                                <td><strong>@item.TenDangNhap</strong></td>
+                                <td><span class="badge bg-coffee">@item.VaiTro</span></td>
+                                <td>
+                                    @if (nhanVien != null)
+                                    {
+                                        <span class="text-success">
+                                            <i class="bi bi-person-check"></i>
+                                            @nhanVien.HoTenNV
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">
+                                            <i class="bi bi-dash-circle"></i>
+                                            Không liên kết
+                                        </span>
+                                    }
+                                </td>
+                                <td>@item.NgayTao.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    @if (item.TrangThai)
+                                    {
+                                        <span class="badge bg-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Khóa</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.MaTK" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="ResetPassword" asp-route-id="@item.MaTK" class="btn btn-sm btn-warning" title="Đặt lại mật khẩu">
+                                        <i class="bi bi-key"></i>
+                                    </a>
+                                    @if (ViewBag.IsAdmin)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-info" onclick="toggleStatus('@item.MaTK')" title="Khóa/Mở">
+                                            <i class="bi bi-toggle-on"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteTaiKhoan('@item.MaTK')" title="Xóa">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleStatus(id) {
+            if (confirm('Bạn có chắc muốn thay đổi trạng thái tài khoản?')) {
+                fetch('/TaiKhoan/ToggleStatus?id=' + id, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+
+        function deleteTaiKhoan(id) {
+            if (confirm('Bạn có chắc muốn xóa tài khoản này? Hành động này không thể hoàn tác!')) {
+                fetch('/TaiKhoan/Delete?id=' + id, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+
+        function showToast(message, type) {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 m-3`;
+            toast.style.zIndex = '9999';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+}

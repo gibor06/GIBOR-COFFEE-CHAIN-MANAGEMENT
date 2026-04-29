@@ -1,0 +1,25 @@
+# Build output
+**/bin/
+**/obj/
+
+# IDE files
+**/.vs/
+**/.vscode/
+
+# Local publish artifacts
+**/publish/
+*.zip
+
+# Logs
+*.log
+
+# User-specific files
+*.user
+*.suo
+
+# ASP.NET local secrets / generated config copies
+**/appsettings.Development.json
+
+# OS files
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,232 @@
+@model DonHangCreateViewModel
+@{
+    ViewData["Title"] = "Tạo Đơn hàng";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-receipt-cutoff"></i> Tạo Đơn hàng - POS</h2>
+
+    <form asp-action="Create" method="post" id="donHangForm">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-coffee text-white">
+                        <h5><i class="bi bi-cart"></i> Chọn sản phẩm</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <select id="bienTheSelect" class="form-select">
+                                    <option value="">-- Chọn sản phẩm --</option>
+                                    @foreach (var bt in ViewBag.BienThes as List<BienTheSanPham>)
+                                    {
+                                        <option value="@bt.MaBienThe">@bt.SanPham.TenSanPham - @bt.Size</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" id="soLuongInput" class="form-control" placeholder="SL" value="1" min="1" />
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-coffee w-100" onclick="themSanPham()">
+                                    <i class="bi bi-plus"></i> Thêm
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table" id="cartTable">
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th>Size</th>
+                                        <th>Đơn giá</th>
+                                        <th>SL</th>
+                                        <th>Thành tiền</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cartBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header bg-coffee text-white">
+                        <h5><i class="bi bi-info-circle"></i> Thông tin đơn hàng</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Chi nhánh</label>
+                            <select asp-for="MaChiNhanh" class="form-select" asp-items="ViewBag.ChiNhanhs"></select>
+                            <span asp-validation-for="MaChiNhanh" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nhân viên</label>
+                            <select asp-for="MaNV" class="form-select" asp-items="ViewBag.NhanViens"></select>
+                            <span asp-validation-for="MaNV" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Khách hàng (tùy chọn)</label>
+                            <select asp-for="MaKH" class="form-select" asp-items="ViewBag.KhachHangs">
+                                <option value="">-- Khách vãng lai --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phương thức thanh toán</label>
+                            <select asp-for="PhuongThucThanhToan" class="form-select">
+                                <option value="Tiền mặt">Tiền mặt</option>
+                                <option value="Thẻ">Thẻ</option>
+                                <option value="Chuyển khoản">Chuyển khoản</option>
+                                <option value="QR">QR</option>
+                                <option value="Ví điện tử">Ví điện tử</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Giảm giá</label>
+                            <input asp-for="GiamGia" type="number" class="form-control" value="0" min="0" id="giamGiaInput" onchange="tinhTong()" />
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Tạm tính:</strong>
+                            <span id="tamTinh">0 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Giảm giá:</strong>
+                            <span id="giamGiaDisplay">0 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <h5>Tổng cộng:</h5>
+                            <h5 class="text-success" id="tongCong">0 đ</h5>
+                        </div>
+
+                        <button type="submit" class="btn btn-coffee w-100 btn-lg">
+                            <i class="bi bi-check-circle"></i> Thanh toán
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary w-100 mt-2">
+                            <i class="bi bi-x-circle"></i> Hủy
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let cart = [];
+
+        async function themSanPham() {
+            const maBienThe = document.getElementById('bienTheSelect').value;
+            const soLuong = parseInt(document.getElementById('soLuongInput').value);
+
+            if (!maBienThe) {
+                showToast('Vui lòng chọn sản phẩm', 'error');
+                return;
+            }
+
+            const response = await fetch('/DonHang/GetBienThePrice?id=' + maBienThe);
+            const data = await response.json();
+
+            if (!data.success) {
+                showToast('Không tìm thấy sản phẩm', 'error');
+                return;
+            }
+
+            const existing = cart.find(item => item.maBienThe === maBienThe);
+            if (existing) {
+                existing.soLuong += soLuong;
+            } else {
+                cart.push({
+                    maBienThe: maBienThe,
+                    tenSanPham: data.tenSanPham,
+                    size: data.size,
+                    donGia: data.price,
+                    soLuong: soLuong
+                });
+            }
+
+            renderCart();
+            document.getElementById('bienTheSelect').value = '';
+            document.getElementById('soLuongInput').value = 1;
+        }
+
+        function xoaSanPham(maBienThe) {
+            cart = cart.filter(item => item.maBienThe !== maBienThe);
+            renderCart();
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = '';
+
+            cart.forEach(item => {
+                const thanhTien = item.donGia * item.soLuong;
+                const row = `
+                    <tr>
+                        <td>${item.tenSanPham}</td>
+                        <td>${item.size}</td>
+                        <td>${formatMoney(item.donGia)}</td>
+                        <td>${item.soLuong}</td>
+                        <td>${formatMoney(thanhTien)}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="xoaSanPham('${item.maBienThe}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+            tinhTong();
+        }
+
+        function tinhTong() {
+            const tamTinh = cart.reduce((sum, item) => sum + (item.donGia * item.soLuong), 0);
+            const giamGia = parseFloat(document.getElementById('giamGiaInput').value) || 0;
+            const tongCong = tamTinh - giamGia;
+
+            document.getElementById('tamTinh').textContent = formatMoney(tamTinh);
+            document.getElementById('giamGiaDisplay').textContent = formatMoney(giamGia);
+            document.getElementById('tongCong').textContent = formatMoney(tongCong);
+        }
+
+        document.getElementById('donHangForm').addEventListener('submit', function(e) {
+            if (cart.length === 0) {
+                e.preventDefault();
+                showToast('Vui lòng thêm ít nhất một sản phẩm', 'error');
+                return;
+            }
+
+            // Add cart items to form
+            cart.forEach((item, index) => {
+                const input1 = document.createElement('input');
+                input1.type = 'hidden';
+                input1.name = `ChiTietDonHangs[${index}].MaBienThe`;
+                input1.value = item.maBienThe;
+                this.appendChild(input1);
+
+                const input2 = document.createElement('input');
+                input2.type = 'hidden';
+                input2.name = `ChiTietDonHangs[${index}].SoLuong`;
+                input2.value = item.soLuong;
+                this.appendChild(input2);
+
+                const input3 = document.createElement('input');
+                input3.type = 'hidden';
+                input3.name = `ChiTietDonHangs[${index}].DonGia`;
+                input3.value = item.donGia;
+                this.appendChild(input3);
+            });
+        });
+    </script>
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

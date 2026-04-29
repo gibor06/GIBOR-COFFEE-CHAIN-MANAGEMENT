@@ -1,0 +1,148 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid p-4">
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary">
+                <div class="stat-icon"><i class="bi bi-shop"></i></div>
+                <div class="stat-content">
+                    <h3>@Model.TongChiNhanh</h3>
+                    <p>Chi nhánh</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-content">
+                    <h3>@Model.TongNhanVien</h3>
+                    <p>Nhân viên</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-warning">
+                <div class="stat-icon"><i class="bi bi-cup-straw"></i></div>
+                <div class="stat-content">
+                    <h3>@Model.TongSanPham</h3>
+                    <p>Sản phẩm</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-info">
+                <div class="stat-icon"><i class="bi bi-receipt"></i></div>
+                <div class="stat-content">
+                    <h3>@Model.TongDonHang</h3>
+                    <p>Đơn hàng</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-cash-coin"></i> Doanh thu hôm nay</h5>
+                    <h2 class="text-success">@Model.DoanhThuHomNay.ToString("N0") đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Cảnh báo tồn kho</h5>
+                    <h2 class="text-danger">@Model.SoCanhBaoTonKho</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-cash-stack"></i> Lương tạm tính</h5>
+                    <h2 class="text-primary">@Model.BangLuongTamTinh.ToString("N0") đ</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-bar-chart"></i> Doanh thu theo tháng</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="doanhThuChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-clock-history"></i> Đơn hàng gần đây</h5>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    @if (Model.DonHangGanDay.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var dh in Model.DonHangGanDay)
+                            {
+                                <a asp-controller="DonHang" asp-action="Details" asp-route-id="@dh.MaDH" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@dh.MaDH</h6>
+                                        <small>@dh.NgayTao.ToString("dd/MM HH:mm")</small>
+                                    </div>
+                                    <p class="mb-1">@dh.TenChiNhanh - @dh.TenNhanVien</p>
+                                    <small class="text-success">@dh.TongTien.ToString("N0") đ</small>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Chưa có đơn hàng nào</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const ctx = document.getElementById('doanhThuChart');
+        const data = @Html.Raw(Json.Serialize(Model.DoanhThuTheoThang));
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => 'Tháng ' + d.thang),
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: data.map(d => d.doanhThu),
+                    backgroundColor: '#8B4513',
+                    borderColor: '#6F3609',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('vi-VN') + ' đ';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}

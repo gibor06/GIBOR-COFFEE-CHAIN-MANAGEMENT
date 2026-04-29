@@ -1,0 +1,121 @@
+@{
+    var vaiTro = Context.Session.GetString("VaiTro");
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <i class="bi bi-cup-hot-fill"></i>
+        <h4>Gibor Coffee</h4>
+    </div>
+
+    <ul class="sidebar-menu">
+        <li class="@(currentController == "Dashboard" ? "active" : "")">
+            <a asp-controller="Dashboard" asp-action="Index">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+
+        @if (vaiTro == "ADMIN")
+        {
+            <li class="@(currentController == "TaiKhoan" ? "active" : "")">
+                <a asp-controller="TaiKhoan" asp-action="Index">
+                    <i class="bi bi-person-badge"></i>
+                    <span>Tài khoản</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        {
+            <li class="@(currentController == "ChiNhanh" ? "active" : "")">
+                <a asp-controller="ChiNhanh" asp-action="Index">
+                    <i class="bi bi-shop"></i>
+                    <span>Chi nhánh</span>
+                </a>
+            </li>
+
+            <li class="@(currentController == "NhanVien" ? "active" : "")">
+                <a asp-controller="NhanVien" asp-action="Index">
+                    <i class="bi bi-people"></i>
+                    <span>Nhân viên</span>
+                </a>
+            </li>
+
+            <li class="@(currentController == "SanPham" ? "active" : "")">
+                <a asp-controller="SanPham" asp-action="Index">
+                    <i class="bi bi-cup-straw"></i>
+                    <span>Sản phẩm</span>
+                </a>
+            </li>
+        }
+
+        <li class="@(currentController == "DonHang" ? "active" : "")">
+            <a asp-controller="DonHang" asp-action="Index">
+                <i class="bi bi-receipt"></i>
+                <span>Đơn hàng</span>
+            </a>
+        </li>
+
+        @if (vaiTro == "NHAN_VIEN" || vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        {
+            <li>
+                <a asp-controller="SanPham" asp-action="Menu">
+                    <i class="bi bi-menu-button-wide"></i>
+                    <span>Menu</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "ADMIN" || vaiTro == "KHO" || vaiTro == "QUAN_LY")
+        {
+            <li class="menu-section">Quản lý kho</li>
+            <li class="@(currentController == "Kho" ? "active" : "")">
+                <a asp-controller="Kho" asp-action="Index">
+                    <i class="bi bi-box-seam"></i>
+                    <span>Tồn kho</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Kho" asp-action="GiaoDich">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span>Giao dịch kho</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Kho" asp-action="CanhBao">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>Cảnh báo tồn kho</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "ADMIN" || vaiTro == "KE_TOAN")
+        {
+            <li class="menu-section">Kế toán</li>
+            <li class="@(currentController == "BangLuong" ? "active" : "")">
+                <a asp-controller="BangLuong" asp-action="Index">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>Bảng lương</span>
+                </a>
+            </li>
+            <li>
+                <a asp-controller="BangLuong" asp-action="KhoiTao">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Khởi tạo lương</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        {
+            <li class="@(currentController == "BaoCao" ? "active" : "")">
+                <a asp-controller="BaoCao" asp-action="Index">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Báo cáo</span>
+                </a>
+            </li>
+        }
+    </ul>
+</nav>

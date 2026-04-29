@@ -1,0 +1,79 @@
+@model IEnumerable<VwMenuChiNhanh>
+@{
+    ViewData["Title"] = "Menu Sản phẩm";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-menu-button-wide"></i> Menu Sản phẩm</h2>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <select name="chiNhanh" class="form-select">
+                        <option value="">-- Tất cả chi nhánh --</option>
+                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                        {
+                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Any())
+    {
+        var groupedMenu = Model.GroupBy(m => m.TenDanhMuc);
+        
+        @foreach (var group in groupedMenu)
+        {
+            <div class="card mb-3">
+                <div class="card-header bg-coffee text-white">
+                    <h5><i class="bi bi-cup-hot"></i> @group.Key</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var item in group)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">@item.TenSanPham</h6>
+                                        <p class="card-text">
+                                            <span class="badge bg-info">@item.Size</span>
+                                            <br />
+                                            <strong class="text-success">@item.GiaBanThucTe?.ToString("N0") đ</strong>
+                                        </p>
+                                        @if (item.TrangThaiMenu == true)
+                                        {
+                                            <span class="badge bg-success">Còn hàng</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Hết hàng</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Chưa có sản phẩm nào trong menu.
+        </div>
+    }
+</div>
