@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Services;
 using QuanLyChuoiCaPhe.Web.ViewModels;
@@ -10,7 +10,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
     {
         private readonly DashboardService _dashboardService;
 
-        public DashboardController(DashboardService dashboardService, AuthService authService) 
+        public DashboardController(DashboardService dashboardService, AuthService authService)
             : base(authService)
         {
             _dashboardService = dashboardService;
@@ -26,8 +26,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = $"Lỗi tải dashboard: {ex.Message}";
-                
-                // Trả về model rỗng để tránh lỗi view
+
+                // Trả về model rỗng để tránh lỗi view.
                 var emptyModel = new DashboardViewModel
                 {
                     TongChiNhanh = 0,
@@ -38,9 +38,10 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     SoCanhBaoTonKho = 0,
                     BangLuongTamTinh = 0,
                     DonHangGanDay = new List<DonHangGanDay>(),
+                    DoanhThu7Ngay = new List<DoanhThuNgay>(),
                     DoanhThuTheoThang = new List<DoanhThuThang>()
                 };
-                
+
                 return View(emptyModel);
             }
         }

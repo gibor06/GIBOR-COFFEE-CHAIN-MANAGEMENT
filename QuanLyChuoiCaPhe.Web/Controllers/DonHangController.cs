@@ -23,7 +23,27 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         public async Task<IActionResult> Index(string? search, DateTime? tuNgay, DateTime? denNgay, string? chiNhanh)
         {
+            if (tuNgay.HasValue && denNgay.HasValue && tuNgay.Value.Date > denNgay.Value.Date)
+            {
+                ModelState.AddModelError(string.Empty, "Khoảng thời gian không hợp lệ: 'Từ ngày' phải nhỏ hơn hoặc bằng 'Đến ngày'.");
+
+                var chiNhanhFilterInvalid = GetChiNhanhFilter();
+                var chiNhanhsInvalidQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
+                if (chiNhanhFilterInvalid != null)
+                {
+                    chiNhanhsInvalidQuery = chiNhanhsInvalidQuery.Where(c => c.MaChiNhanh == chiNhanhFilterInvalid);
+                }
+
+                ViewBag.ChiNhanhs = await chiNhanhsInvalidQuery.AsNoTracking().ToListAsync();
+                ViewBag.Search = search;
+                ViewBag.TuNgay = tuNgay?.ToString("yyyy-MM-dd");
+                ViewBag.DenNgay = denNgay?.ToString("yyyy-MM-dd");
+                ViewBag.ChiNhanh = chiNhanh;
+                return View(new List<Models.DonHang>());
+            }
+
             var query = _context.DonHangs
+                .AsNoTracking()
                 .Include(d => d.ChiNhanh)
                 .Include(d => d.ThongTinNhanVien)
                 .Include(d => d.KhachHang)
@@ -73,6 +93,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
         public async Task<IActionResult> Create()
         {
             // Lọc danh sách chi nhánh theo quyền
@@ -109,6 +130,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DonHangCreateViewModel model)
         {

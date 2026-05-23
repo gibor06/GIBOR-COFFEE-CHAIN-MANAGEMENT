@@ -1,6 +1,16 @@
-@{
+﻿@{
     var vaiTro = Context.Session.GetString("VaiTro");
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+
+    Func<string, string, string> activeByRoute = (controller, action) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase)
+            ? "active"
+            : string.Empty;
+
+    Func<string, string> activeByController = controller =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
 }
 
 <nav class="sidebar" id="sidebar">
@@ -10,7 +20,7 @@
     </div>
 
     <ul class="sidebar-menu">
-        <li class="@(currentController == "Dashboard" ? "active" : "")">
+        <li class="@activeByRoute("Dashboard", "Index")">
             <a asp-controller="Dashboard" asp-action="Index">
                 <i class="bi bi-speedometer2"></i>
                 <span>Dashboard</span>
@@ -19,7 +29,7 @@
 
         @if (vaiTro == "ADMIN")
         {
-            <li class="@(currentController == "TaiKhoan" ? "active" : "")">
+            <li class="@activeByController("TaiKhoan")">
                 <a asp-controller="TaiKhoan" asp-action="Index">
                     <i class="bi bi-person-badge"></i>
                     <span>Tài khoản</span>
@@ -29,21 +39,21 @@
 
         @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
         {
-            <li class="@(currentController == "ChiNhanh" ? "active" : "")">
+            <li class="@activeByController("ChiNhanh")">
                 <a asp-controller="ChiNhanh" asp-action="Index">
                     <i class="bi bi-shop"></i>
                     <span>Chi nhánh</span>
                 </a>
             </li>
 
-            <li class="@(currentController == "NhanVien" ? "active" : "")">
+            <li class="@activeByController("NhanVien")">
                 <a asp-controller="NhanVien" asp-action="Index">
                     <i class="bi bi-people"></i>
                     <span>Nhân viên</span>
                 </a>
             </li>
 
-            <li class="@(currentController == "SanPham" ? "active" : "")">
+            <li class="@activeByRoute("SanPham", "Index")">
                 <a asp-controller="SanPham" asp-action="Index">
                     <i class="bi bi-cup-straw"></i>
                     <span>Sản phẩm</span>
@@ -51,7 +61,7 @@
             </li>
         }
 
-        <li class="@(currentController == "DonHang" ? "active" : "")">
+        <li class="@activeByController("DonHang")">
             <a asp-controller="DonHang" asp-action="Index">
                 <i class="bi bi-receipt"></i>
                 <span>Đơn hàng</span>
@@ -60,7 +70,7 @@
 
         @if (vaiTro == "NHAN_VIEN" || vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
         {
-            <li>
+            <li class="@activeByRoute("SanPham", "Menu")">
                 <a asp-controller="SanPham" asp-action="Menu">
                     <i class="bi bi-menu-button-wide"></i>
                     <span>Menu</span>
@@ -71,19 +81,19 @@
         @if (vaiTro == "ADMIN" || vaiTro == "KHO" || vaiTro == "QUAN_LY")
         {
             <li class="menu-section">Quản lý kho</li>
-            <li class="@(currentController == "Kho" ? "active" : "")">
+            <li class="@activeByRoute("Kho", "Index")">
                 <a asp-controller="Kho" asp-action="Index">
                     <i class="bi bi-box-seam"></i>
                     <span>Tồn kho</span>
                 </a>
             </li>
-            <li>
+            <li class="@activeByRoute("Kho", "GiaoDich")">
                 <a asp-controller="Kho" asp-action="GiaoDich">
                     <i class="bi bi-arrow-left-right"></i>
                     <span>Giao dịch kho</span>
                 </a>
             </li>
-            <li>
+            <li class="@activeByRoute("Kho", "CanhBao")">
                 <a asp-controller="Kho" asp-action="CanhBao">
                     <i class="bi bi-exclamation-triangle"></i>
                     <span>Cảnh báo tồn kho</span>
@@ -94,13 +104,13 @@
         @if (vaiTro == "ADMIN" || vaiTro == "KE_TOAN")
         {
             <li class="menu-section">Kế toán</li>
-            <li class="@(currentController == "BangLuong" ? "active" : "")">
+            <li class="@activeByRoute("BangLuong", "Index")">
                 <a asp-controller="BangLuong" asp-action="Index">
                     <i class="bi bi-cash-stack"></i>
                     <span>Bảng lương</span>
                 </a>
             </li>
-            <li>
+            <li class="@activeByRoute("BangLuong", "KhoiTao")">
                 <a asp-controller="BangLuong" asp-action="KhoiTao">
                     <i class="bi bi-plus-circle"></i>
                     <span>Khởi tạo lương</span>
@@ -110,7 +120,7 @@
 
         @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
         {
-            <li class="@(currentController == "BaoCao" ? "active" : "")">
+            <li class="@activeByController("BaoCao")">
                 <a asp-controller="BaoCao" asp-action="Index">
                     <i class="bi bi-bar-chart"></i>
                     <span>Báo cáo</span>

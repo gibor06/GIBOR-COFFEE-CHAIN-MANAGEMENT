@@ -1429,9 +1429,11 @@ GO
 
 INSERT INTO dbo.HeThongTaiKhoan (MaTK, TenDangNhap, MatKhauHash, VaiTro, TrangThai, NgayTao) VALUES
     ('TK00', 'trangiabao', '123123', 'ADMIN', 1, '2025-02-03T09:16:00'),
-    ('TK01', 'tranduonggiabao', '123123', 'ADMIN', 1, '2025-02-03T09:16:00'),
-    ('TK02', 'lequangbao', '123123', 'ADMIN', 1, '2025-02-03T09:16:00'),
-    ('TK03', 'nguyenngocchau', '123123', 'ADMIN', 1, '2025-02-03T09:16:00')
+    ('TK01', 'tranduonggiabao', '123123', 'NHAN_VIEN', 1, '2025-02-03T09:16:00'),
+    ('TK02', 'lequangbao', '123123', 'QUAN_LY', 1, '2025-02-03T09:16:00'),
+    ('TK03', 'nguyenngocchau', '123123', 'KE_TOAN', 1, '2025-02-03T09:16:00'),
+    ('TK04', 'nguyentheanh', '123123', 'KHO', 1, '2025-02-03T09:16:00')
+GO
 
 INSERT INTO dbo.HeThongTaiKhoan (MaTK, TenDangNhap, MatKhauHash, VaiTro, TrangThai, NgayTao) VALUES
     ('TK00000001', 'tranvankhang01', 'sha256$448176ba3443a00748d965d5438aabc6fc74bea1d9cecbc68e09a581a0b06ce2', 'NHAN_VIEN', 1, '2025-02-03T09:16:00'),
@@ -1452,8 +1454,8 @@ INSERT INTO dbo.HeThongTaiKhoan (MaTK, TenDangNhap, MatKhauHash, VaiTro, TrangTh
     ('TK00000013', 'phamquocduc13', 'sha256$9b31a8f2886e30b6f11a4beb1b18b2aed7a17ddeb685b8d133c1c10954adc9e3', 'NHAN_VIEN', 1, '2025-04-27T12:28:00'),
     ('TK00000014', 'dangkhanhgiang14', 'sha256$36387be27682f4f65f8ce6a7635af2a43d88796265caeb7eeb50e79b178b8863', 'NHAN_VIEN', 0, '2025-05-02T13:29:00'),
     ('TK00000015', 'phanminhhung15', 'sha256$eeb63e867e3071a7ff73a495ae3f4ea0ee51468a3559cd7a306aa91248352d10', 'NHAN_VIEN', 1, '2025-06-04T14:30:00'),
-    ('TK00000016', 'vothuchi16', 'sha256$0c5186c0ce917b1fffe2775c9b45bb3cb02cf92c31fc49b1079564ce9207ad0d', 'ADMIN', 1, '2025-07-06T15:31:00'),
-    ('TK00000017', 'vocongcuong17', 'sha256$a85d4f513d0ed46983390dae3a8257259874c47927e9ed6e3ed2f7b0181ffa57', 'ADMIN', 1, '2025-08-08T16:32:00'),
+    ('TK00000016', 'vothuchi16', 'sha256$0c5186c0ce917b1fffe2775c9b45bb3cb02cf92c31fc49b1079564ce9207ad0d', 'QUAN_LY', 1, '2025-07-06T15:31:00'),
+    ('TK00000017', 'vocongcuong17', 'sha256$a85d4f513d0ed46983390dae3a8257259874c47927e9ed6e3ed2f7b0181ffa57', 'QUAN_LY', 1, '2025-08-08T16:32:00'),
     ('TK00000018', 'nguyenphuongan18', 'sha256$4b745ab9eaa02d23e03339b64d677efaec58cc103b54e79a2818805f57d22586', 'QUAN_LY', 1, '2025-09-10T08:33:00'),
     ('TK00000019', 'tranquocdat19', 'sha256$c0587cd1a8cfac2da154c0d37cb8a3dbf4f379d8f89dbd08c22638b86ace6a90', 'QUAN_LY', 1, '2025-10-12T09:34:00'),
     ('TK00000020', 'phankhanhnhung20', 'sha256$280a194e8c1718d1041975509dd213f7740196155f01e76db2b06f890ffe38da', 'QUAN_LY', 1, '2025-01-14T10:35:00');
@@ -1679,6 +1681,10 @@ INSERT INTO dbo.ChiNhanh (MaChiNhanh, MaKhuVuc, TenChiNhanh, SoDienThoai, DiaChi
 GO
 
 INSERT INTO dbo.ChucVuNhanVien (MaChucVu, TenChucVu, LuongCoBanGio) VALUES
+('CV01', N'ADMIN', 500000)
+GO
+
+INSERT INTO dbo.ChucVuNhanVien (MaChucVu, TenChucVu, LuongCoBanGio) VALUES
     ('CV00000001', N'Barista bậc 1', 22000.00),
     ('CV00000002', N'Barista bậc 2', 25000.00),
     ('CV00000003', N'Barista bậc 3', 28000.00),
@@ -1740,64 +1746,72 @@ INSERT INTO dbo.ChucVuNhanVien (MaChucVu, TenChucVu, LuongCoBanGio) VALUES
 GO
 
 INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
-    ('NV00000001', 2, N'Trần Văn Khang', 'CV00000001', 'CN00000001', '2023-04-05', NULL, '0782097999', '966616964001', 'tranvankhang.01@maycoffee.vn', 1),
-    ('NV00000002', 2, N'Trần Phương Hiền', 'CV00000002', 'CN00000002', '2024-05-07', NULL, '0989639081', '977358886002', 'tranphuonghien.02@maycoffee.vn', 1),
-    ('NV00000003', 2, N'Hoàng Anh Đức', 'CV00000003', 'CN00000003', '2022-06-09', NULL, '0789038526', '211225158003', 'hoanganhduc.03@maycoffee.vn', 1),
-    ('NV00000004', 1, N'Đặng Thanh Thảo', 'CV00000004', 'CN00000004', '2023-07-11', NULL, '0335496015', '223940587004', 'dangthanhthao.04@maycoffee.vn', 1),
-    ('NV00000005', 1, N'Bùi Anh Hiếu', 'CV00000005', 'CN00000005', '2024-08-13', NULL, '0999645480', '694019365005', 'buianhhieu.05@maycoffee.vn', 1),
-    ('NV00000006', 2, N'Ngô Khánh Ngân', 'CV00000006', 'CN00000006', '2022-09-15', NULL, '0336553958', '402533494006', 'ngokhanhngan.06@maycoffee.vn', 1),
-    ('NV00000007', 2, N'Phạm Hữu Cường', 'CV00000007', 'CN00000007', '2023-10-17', NULL, '0396316277', '468164906007', 'phamhuucuong.07@maycoffee.vn', 1),
-    ('NV00000008', 2, N'Đỗ Mai Mai', 'CV00000008', 'CN00000008', '2024-11-19', NULL, '0392274302', '781007818008', 'domaimai.08@maycoffee.vn', 1),
-    ('NV00000009', 2, 'Phan Thanh Nam', 'CV00000009', 'CN00000009', '2022-12-21', NULL, '0767834855', '624557080009', 'phanthanhnam.09@maycoffee.vn', 1),
-    ('NV00000010', 2, N'Dương Thị Vy', 'CV00000010', 'CN00000010', '2023-01-23', NULL, '0706818112', '199104722010', 'duongthivy.10@maycoffee.vn', 1);
+    ('NV01', 1, N'Trần Gia Bảo', 'CV01', 'CN00000001', '2023-04-05', NULL, '0782097999', '966616964501', 'gibor06.dev@giborcoffee.vn', 1),
+    ('NV02', 1, N'Lê Quang Bảo', 'CV00000020', 'CN00000001', '2024-05-07', NULL, '0989679081', '966616984501', 'lequangbao@giborcoffee.vn', 1),
+    ('NV03', 1, N'Nguyễn Ngọc Châu', 'CV00000050', 'CN00000001', '2022-06-09', NULL, '0789738566', '966616284501', 'nguyenngocchau@giborcoffee.vn', 1),
+    ('NV04', 1, N'Nguyễn Thế Anh', 'CV00000025', 'CN00000001', '2022-06-09', NULL, '0789039526', '211223158003', 'nguyentheanh@giborcoffee.vn', 1),
+    ('NV05', 1, N'Trần Dương Gia Bảo', 'CV00000035', 'CN00000001', '2022-06-09', NULL, '0709038526', '214225158003', 'tranduonggiabao@giborcoffee.vn', 1)
+GO
+
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+    ('NV00000001', 2, N'Trần Văn Khang', 'CV00000001', 'CN00000001', '2023-04-05', NULL, '0782037999', '966616964001', 'tranvankhang.01@giborcoffee.vn', 1),
+    ('NV00000002', 2, N'Trần Phương Hiền', 'CV00000002', 'CN00000002', '2024-05-07', NULL, '0989639081', '966616974501', 'tranphuonghien.02@giborcoffee.vn', 1),
+    ('NV00000003', 2, N'Hoàng Anh Đức', 'CV00000003', 'CN00000003', '2022-06-09', NULL, '0789038526', '211225158003', 'hoanganhduc.03@giborcoffee.vn', 1),
+    ('NV00000004', 1, N'Đặng Thanh Thảo', 'CV00000004', 'CN00000004', '2023-07-11', NULL, '0335496015', '223940587004', 'dangthanhthao.04@giborcoffee.vn', 1),
+    ('NV00000005', 1, N'Bùi Anh Hiếu', 'CV00000005', 'CN00000005', '2024-08-13', NULL, '0999645480', '694019365005', 'buianhhieu.05@giborcoffee.vn', 1),
+    ('NV00000006', 2, N'Ngô Khánh Ngân', 'CV00000006', 'CN00000006', '2022-09-15', NULL, '0336553958', '402533494006', 'ngokhanhngan.06@giborcoffee.vn', 1),
+    ('NV00000007', 2, N'Phạm Hữu Cường', 'CV00000007', 'CN00000007', '2023-10-17', NULL, '0396316277', '468164906007', 'phamhuucuong.07@giborcoffee.vn', 1),
+    ('NV00000008', 2, N'Đỗ Mai Mai', 'CV00000008', 'CN00000008', '2024-11-19', NULL, '0392274302', '781007818008', 'domaimai.08@giborcoffee.vn', 1),
+    ('NV00000009', 2, 'Phan Thanh Nam', 'CV00000009', 'CN00000009', '2022-12-21', NULL, '0767834855', '624557080009', 'phanthanhnam.09@giborcoffee.vn', 1),
+    ('NV00000010', 2, N'Dương Thị Vy', 'CV00000010', 'CN00000010', '2023-01-23', NULL, '0706818112', '199104722010', 'duongthivy.10@giborcoffee.vn', 1);
 GO
 INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
-    ('NV00000011', 1, N'Đỗ Hữu Bảo', 'CV00000011', 'CN00000011', '2024-02-25', NULL, '0837135391', '147337803011', 'dohuubao.11@maycoffee.vn', 1),
-    ('NV00000012', 1, N'Phan Bảo Diễm', 'CV00000012', 'CN00000012', '2022-03-27', NULL, '0944769200', '927982963012', 'phanbaodiem.12@maycoffee.vn', 1),
-    ('NV00000013', 1, N'Phạm Quốc Đức', 'CV00000013', 'CN00000013', '2023-04-04', NULL, '0385511909', '381272327013', 'phamquocduc.13@maycoffee.vn', 1),
-    ('NV00000014', 1, N'Đặng Khánh Giang', 'CV00000014', 'CN00000014', '2024-05-06', NULL, '0399486328', '574417266014', 'dangkhanhgiang.14@maycoffee.vn', 1),
-    ('NV00000015', 1, N'Phan Minh Hùng', 'CV00000015', 'CN00000015', '2022-06-08', NULL, '0875283645', '110382761015', 'phanminhhung.15@maycoffee.vn', 1),
-    ('NV00000016', 1, N'Võ Thu Chi', 'CV00000016', 'CN00000016', '2023-07-10', NULL, '0910099059', '841976666016', 'vothuchi.16@maycoffee.vn', 1),
-    ('NV00000017', 1, N'Võ Công Cường', 'CV00000017', 'CN00000017', '2024-08-12', NULL, '0373227889', '138684919017', 'vocongcuong.17@maycoffee.vn', 1),
-    ('NV00000018', 1, N'Nguyễn Phương An', 'CV00000018', 'CN00000018', '2022-09-14', NULL, '0778183110', '693269304018', 'nguyenphuongan.18@maycoffee.vn', 1),
-    ('NV00000019', 1, N'Trần Quốc Đạt', 'CV00000019', 'CN00000019', '2023-10-16', NULL, '0357684996', '236843584019', 'tranquocdat.19@maycoffee.vn', 1),
-    ('NV00000020', 1, N'Phan Khánh Nhung', 'CV00000020', 'CN00000020', '2024-11-18', NULL, '0941373735', '491541578020', 'phankhanhnhung.20@maycoffee.vn', 1);
+    ('NV00000011', 1, N'Đỗ Hữu Bảo', 'CV00000011', 'CN00000011', '2024-02-25', NULL, '0837135391', '147337803011', 'dohuubao.11@giborcoffee.vn', 1),
+    ('NV00000012', 1, N'Phan Bảo Diễm', 'CV00000012', 'CN00000012', '2022-03-27', NULL, '0944769200', '927982963012', 'phanbaodiem.12@giborcoffee.vn', 1),
+    ('NV00000013', 1, N'Phạm Quốc Đức', 'CV00000013', 'CN00000013', '2023-04-04', NULL, '0385511909', '381272327013', 'phamquocduc.13@giborcoffee.vn', 1),
+    ('NV00000014', 1, N'Đặng Khánh Giang', 'CV00000014', 'CN00000014', '2024-05-06', NULL, '0399486328', '574417266014', 'dangkhanhgiang.14@giborcoffee.vn', 1),
+    ('NV00000015', 1, N'Phan Minh Hùng', 'CV00000015', 'CN00000015', '2022-06-08', NULL, '0875283645', '110382761015', 'phanminhhung.15@giborcoffee.vn', 1),
+    ('NV00000016', 1, N'Võ Thu Chi', 'CV00000016', 'CN00000016', '2023-07-10', NULL, '0910099059', '841976666016', 'vothuchi.16@giborcoffee.vn', 1),
+    ('NV00000017', 1, N'Võ Công Cường', 'CV00000017', 'CN00000017', '2024-08-12', NULL, '0373227889', '138684919017', 'vocongcuong.17@giborcoffee.vn', 1),
+    ('NV00000018', 1, N'Nguyễn Phương An', 'CV00000018', 'CN00000018', '2022-09-14', NULL, '0778183110', '693269304018', 'nguyenphuongan.18@giborcoffee.vn', 1),
+    ('NV00000019', 1, N'Trần Quốc Đạt', 'CV00000019', 'CN00000019', '2023-10-16', NULL, '0357684996', '236843584019', 'tranquocdat.19@giborcoffee.vn', 1),
+    ('NV00000020', 1, N'Phan Khánh Nhung', 'CV00000020', 'CN00000020', '2024-11-18', NULL, '0941373735', '491541578020', 'phankhanhnhung.20@giborcoffee.vn', 1);
 GO
 INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
-    ('NV00000021', 1, N'Phạm Thanh Bảo', 'CV00000021', 'CN00000021', '2022-12-20', NULL, '0948024342', '325567963021', 'phamthanhbao.21@maycoffee.vn', 1),
-    ('NV00000022', 1, N'Lê Mai An', 'CV00000022', 'CN00000022', '2023-01-22', NULL, '0389514287', '210373808022', 'lemaian.22@maycoffee.vn', 1),
-    ('NV00000023', 1, N'Phan Đức Nam', 'CV00000023', 'CN00000023', '2024-02-24', NULL, '0775146293', '536344399023', 'phanducnam.23@maycoffee.vn', 1),
-    ('NV00000024', 1, N'Hoàng Mai Yến', 'CV00000024', 'CN00000024', '2022-03-26', NULL, '0331774346', '274484941024', 'hoangmaiyen.24@maycoffee.vn', 1),
-    ('NV00000025', 1, N'Hồ Công Vinh', 'CV00000025', 'CN00000025', '2023-04-03', NULL, '0355337219', '126614158025', 'hocongvinh.25@maycoffee.vn', 1),
-    ('NV00000026', 1, N'Hồ Khánh Giang', 'CV00000026', 'CN00000026', '2024-05-05', NULL, '0398860009', '456681425026', 'hokhanhgiang.26@maycoffee.vn', 1),
-    ('NV00000027', 1, N'Phạm Đức Đức', 'CV00000027', 'CN00000027', '2022-06-07', NULL, '0889913412', '889262019027', 'phamducduc.27@maycoffee.vn', 1),
-    ('NV00000028', 1, N'Nguyễn Quỳnh Quỳnh', 'CV00000028', 'CN00000028', '2023-07-09', NULL, '0335810056', '270937380028', 'nguyenquynhquynh.28@maycoffee.vn', 1),
-    ('NV00000029', 1, N'Nguyễn Gia Bảo', 'CV00000029', 'CN00000029', '2024-08-11', NULL, '0951343880', '141580226029', 'nguyengiabao.29@maycoffee.vn', 1),
-    ('NV00000030', 1, N'Nguyễn Quỳnh Nhung', 'CV00000030', 'CN00000030', '2022-09-13', NULL, '0829854548', '314289692030', 'nguyenquynhnhung.30@maycoffee.vn', 1);
+    ('NV00000021', 1, N'Phạm Thanh Bảo', 'CV00000021', 'CN00000021', '2022-12-20', NULL, '0948024342', '325567963021', 'phamthanhbao.21@giborcoffee.vn', 1),
+    ('NV00000022', 1, N'Lê Mai An', 'CV00000022', 'CN00000022', '2023-01-22', NULL, '0389514287', '210373808022', 'lemaian.22@giborcoffee.vn', 1),
+    ('NV00000023', 1, N'Phan Đức Nam', 'CV00000023', 'CN00000023', '2024-02-24', NULL, '0775146293', '536344399023', 'phanducnam.23@giborcoffee.vn', 1),
+    ('NV00000024', 1, N'Hoàng Mai Yến', 'CV00000024', 'CN00000024', '2022-03-26', NULL, '0331774346', '274484941024', 'hoangmaiyen.24@giborcoffee.vn', 1),
+    ('NV00000025', 1, N'Hồ Công Vinh', 'CV00000025', 'CN00000025', '2023-04-03', NULL, '0355337219', '126614158025', 'hocongvinh.25@giborcoffee.vn', 1),
+    ('NV00000026', 1, N'Hồ Khánh Giang', 'CV00000026', 'CN00000026', '2024-05-05', NULL, '0398860009', '456681425026', 'hokhanhgiang.26@giborcoffee.vn', 1),
+    ('NV00000027', 1, N'Phạm Đức Đức', 'CV00000027', 'CN00000027', '2022-06-07', NULL, '0889913412', '889262019027', 'phamducduc.27@giborcoffee.vn', 1),
+    ('NV00000028', 1, N'Nguyễn Quỳnh Quỳnh', 'CV00000028', 'CN00000028', '2023-07-09', NULL, '0335810056', '270937380028', 'nguyenquynhquynh.28@giborcoffee.vn', 1),
+    ('NV00000029', 1, N'Nguyễn Gia Bảo', 'CV00000029', 'CN00000029', '2024-08-11', NULL, '0951343880', '141580226029', 'nguyengiabao.29@giborcoffee.vn', 1),
+    ('NV00000030', 1, N'Nguyễn Quỳnh Nhung', 'CV00000030', 'CN00000030', '2022-09-13', NULL, '0829854548', '314289692030', 'nguyenquynhnhung.30@giborcoffee.vn', 1);
 GO
 INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
-    ('NV00000031', 1, N'Đặng Công Đạt', 'CV00000031', 'CN00000031', '2023-10-15', NULL, '0846930359', '427696198031', 'dangcongdat.31@maycoffee.vn', 1),
-    ('NV00000032', 1, N'Nguyễn Phương Chi', 'CV00000032', 'CN00000032', '2024-11-17', NULL, '0329920292', '125409494032', 'nguyenphuongchi.32@maycoffee.vn', 1),
-    ('NV00000033', 1, N'Dương Minh Bình', 'CV00000033', 'CN00000033', '2022-12-19', NULL, '0353481198', '452468587033', 'duongminhbinh.33@maycoffee.vn', 1),
-    ('NV00000034', 1, N'Bùi Ngọc Vy', 'CV00000034', 'CN00000034', '2023-01-21', NULL, '0709317495', '930353157034', 'buingocvy.34@maycoffee.vn', 1),
-    ('NV00000035', 1, N'Dương Quốc Long', 'CV00000035', 'CN00000035', '2024-02-23', NULL, '0747130035', '788785773035', 'duongquoclong.35@maycoffee.vn', 1),
-    ('NV00000036', 1, N'Trần Quỳnh Hiền', 'CV00000036', 'CN00000036', '2022-03-25', NULL, '0891203377', '675757257036', 'tranquynhhien.36@maycoffee.vn', 1),
-    ('NV00000037', 1, N'Bùi Xuân Bảo', 'CV00000037', 'CN00000037', '2023-04-27', NULL, '0703704481', '223847257037', 'buixuanbao.37@maycoffee.vn', 1),
-    ('NV00000038', 1, N'Bùi Ngọc Ngân', 'CV00000038', 'CN00000038', '2024-05-04', NULL, '0723966966', '723403479038', 'buingocngan.38@maycoffee.vn', 1),
-    ('NV00000039', 1, N'Đỗ Xuân Thành', 'CV00000039', 'CN00000039', '2022-06-06', NULL, '0705134794', '216396351039', 'doxuanthanh.39@maycoffee.vn', 1),
-    ('NV00000040', 1, N'Đặng Bảo Hương', 'CV00000040', 'CN00000040', '2023-07-08', NULL, '0846397338', '882269302040', 'dangbaohuong.40@maycoffee.vn', 1);
+    ('NV00000031', 1, N'Đặng Công Đạt', 'CV00000031', 'CN00000031', '2023-10-15', NULL, '0846930359', '427696198031', 'dangcongdat.31@giborcoffee.vn', 1),
+    ('NV00000032', 1, N'Nguyễn Phương Chi', 'CV00000032', 'CN00000032', '2024-11-17', NULL, '0329920292', '125409494032', 'nguyenphuongchi.32@giborcoffee.vn', 1),
+    ('NV00000033', 1, N'Dương Minh Bình', 'CV00000033', 'CN00000033', '2022-12-19', NULL, '0353481198', '452468587033', 'duongminhbinh.33@giborcoffee.vn', 1),
+    ('NV00000034', 1, N'Bùi Ngọc Vy', 'CV00000034', 'CN00000034', '2023-01-21', NULL, '0709317495', '930353157034', 'buingocvy.34@giborcoffee.vn', 1),
+    ('NV00000035', 1, N'Dương Quốc Long', 'CV00000035', 'CN00000035', '2024-02-23', NULL, '0747130035', '788785773035', 'duongquoclong.35@giborcoffee.vn', 1),
+    ('NV00000036', 1, N'Trần Quỳnh Hiền', 'CV00000036', 'CN00000036', '2022-03-25', NULL, '0891203377', '675757257036', 'tranquynhhien.36@giborcoffee.vn', 1),
+    ('NV00000037', 1, N'Bùi Xuân Bảo', 'CV00000037', 'CN00000037', '2023-04-27', NULL, '0703704481', '223847257037', 'buixuanbao.37@giborcoffee.vn', 1),
+    ('NV00000038', 1, N'Bùi Ngọc Ngân', 'CV00000038', 'CN00000038', '2024-05-04', NULL, '0723966966', '723403479038', 'buingocngan.38@giborcoffee.vn', 1),
+    ('NV00000039', 1, N'Đỗ Xuân Thành', 'CV00000039', 'CN00000039', '2022-06-06', NULL, '0705134794', '216396351039', 'doxuanthanh.39@giborcoffee.vn', 1),
+    ('NV00000040', 1, N'Đặng Bảo Hương', 'CV00000040', 'CN00000040', '2023-07-08', NULL, '0846397338', '882269302040', 'dangbaohuong.40@giborcoffee.vn', 1);
 GO
 INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
-    ('NV00000041', 2, N'Phạm Gia Hiếu', 'CV00000041', 'CN00000041', '2024-08-10', NULL, '0758571795', '750911797041', 'phamgiahieu.41@maycoffee.vn', 1),
-    ('NV00000042', 2, N'Hoàng Mai Giang', 'CV00000042', 'CN00000042', '2022-09-12', NULL, '0951700055', '719106699042', 'hoangmaigiang.42@maycoffee.vn', 1),
-    ('NV00000043', 2, N'Đỗ Đức Nam', 'CV00000043', 'CN00000043', '2023-10-14', NULL, '0334188276', '147659674043', 'doducnam.43@maycoffee.vn', 1),
-    ('NV00000044', 2, N'Huỳnh Ngọc An', 'CV00000044', 'CN00000044', '2024-11-16', NULL, '0800226999', '658260221044', 'huynhngocan.44@maycoffee.vn', 1),
-    ('NV00000045', 2, N'Võ Xuân Thành', 'CV00000045', 'CN00000045', '2022-12-18', NULL, '0348884978', '563102056045', 'voxuanthanh.45@maycoffee.vn', 1),
-    ('NV00000046', 1, N'Trần Ngọc Quỳnh', 'CV00000046', 'CN00000046', '2023-01-20', NULL, '0989152472', '454549587046', 'tranngocquynh.46@maycoffee.vn', 1),
-    ('NV00000047', 1, N'Phạm Công Hùng', 'CV00000047', 'CN00000047', '2024-02-22', NULL, '0789038359', '233815413047', 'phamconghung.47@maycoffee.vn', 1),
-    ('NV00000048', 1, N'Lê Bảo Chi', 'CV00000048', 'CN00000048', '2022-03-24', NULL, '0768064830', '432091877048', 'lebaochi.48@maycoffee.vn', 1),
-    ('NV00000049', 1, N'Phạm Gia Khánh', 'CV00000049', 'CN00000049', '2023-04-26', NULL, '0843779528', '532074125049', 'phamgiakhanh.49@maycoffee.vn', 1),
-    ('NV00000050', 1, N'Lê Khánh Quỳnh', 'CV00000050', 'CN00000050', '2024-05-03', NULL, '0774411983', '236674237050', 'lekhanhquynh.50@maycoffee.vn', 1);
+    ('NV00000041', 2, N'Phạm Gia Hiếu', 'CV00000041', 'CN00000041', '2024-08-10', NULL, '0758571795', '750911797041', 'phamgiahieu.41@giborcoffee.vn', 1),
+    ('NV00000042', 2, N'Hoàng Mai Giang', 'CV00000042', 'CN00000042', '2022-09-12', NULL, '0951700055', '719106699042', 'hoangmaigiang.42@giborcoffee.vn', 1),
+    ('NV00000043', 2, N'Đỗ Đức Nam', 'CV00000043', 'CN00000043', '2023-10-14', NULL, '0334188276', '147659674043', 'doducnam.43@giborcoffee.vn', 1),
+    ('NV00000044', 2, N'Huỳnh Ngọc An', 'CV00000044', 'CN00000044', '2024-11-16', NULL, '0800226999', '658260221044', 'huynhngocan.44@giborcoffee.vn', 1),
+    ('NV00000045', 2, N'Võ Xuân Thành', 'CV00000045', 'CN00000045', '2022-12-18', NULL, '0348884978', '563102056045', 'voxuanthanh.45@giborcoffee.vn', 1),
+    ('NV00000046', 1, N'Trần Ngọc Quỳnh', 'CV00000046', 'CN00000046', '2023-01-20', NULL, '0989152472', '454549587046', 'tranngocquynh.46@giborcoffee.vn', 1),
+    ('NV00000047', 1, N'Phạm Công Hùng', 'CV00000047', 'CN00000047', '2024-02-22', NULL, '0789038359', '233815413047', 'phamconghung.47@giborcoffee.vn', 1),
+    ('NV00000048', 1, N'Lê Bảo Chi', 'CV00000048', 'CN00000048', '2022-03-24', NULL, '0768064830', '432091877048', 'lebaochi.48@giborcoffee.vn', 1),
+    ('NV00000049', 1, N'Phạm Gia Khánh', 'CV00000049', 'CN00000049', '2023-04-26', NULL, '0843779528', '532074125049', 'phamgiakhanh.49@giborcoffee.vn', 1),
+    ('NV00000050', 1, N'Lê Khánh Quỳnh', 'CV00000050', 'CN00000050', '2024-05-03', NULL, '0774411983', '236674237050', 'lekhanhquynh.50@giborcoffee.vn', 1);
 GO
 
 INSERT INTO dbo.TaiKhoanNhanVien (MaTK, MaNV) VALUES
@@ -2972,17 +2986,31 @@ DISABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
 GO
 
 INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0001', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-03T08:07:00'),
-    ('DH0002', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-05T09:14:00'),
-    ('DH0003', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-07T10:21:00'),
-    ('DH0004', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-03-09T11:28:00'),
-    ('DH0005', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-11T12:35:00'),
-    ('DH0006', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-13T13:42:00'),
-    ('DH0007', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-03-15T14:49:00'),
-    ('DH0008', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-17T15:56:00'),
-    ('DH0009', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-03-19T16:03:00'),
-    ('DH0010', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-21T17:10:00');
+    ('DH0101', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-03T08:07:00'),
+    ('DH0102', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-05-05T09:14:00'),
+    ('DH0103', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-07T10:21:00'),
+    ('DH0104', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-05-09T11:28:00'),
+    ('DH0105', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-11T12:35:00'),
+    ('DH0106', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-13T13:42:00'),
+    ('DH0107', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-05-15T14:49:00'),
+    ('DH0108', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-05-17T15:56:00'),
+    ('DH0109', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-05-19T16:03:00'),
+    ('DH0110', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-05-21T17:10:00');
 GO
+
+INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
+    ('DH0201', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-23T08:07:00'),
+    ('DH0202', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-05-23T09:14:00'),
+    ('DH0203', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-23T10:21:00'),
+    ('DH0204', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-05-23T11:28:00'),
+    ('DH0205', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-23T12:35:00'),
+    ('DH0206', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-23T13:42:00'),
+    ('DH0207', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-05-23T14:49:00'),
+    ('DH0208', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-05-23T15:56:00'),
+    ('DH0209', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-05-23T16:03:00'),
+    ('DH0210', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-05-23T17:10:00');
+GO
+
 INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
     ('DH0011', 'CN00000011', 'NV00000011', 'KH0011', 244000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-23T18:17:00'),
     ('DH0012', 'CN00000012', 'NV00000012', NULL, 67000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-25T19:24:00'),

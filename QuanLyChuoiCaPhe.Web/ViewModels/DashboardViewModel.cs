@@ -10,6 +10,7 @@ namespace QuanLyChuoiCaPhe.Web.ViewModels
         public int SoCanhBaoTonKho { get; set; }
         public decimal BangLuongTamTinh { get; set; }
         public List<DonHangGanDay> DonHangGanDay { get; set; } = new List<DonHangGanDay>();
+        public List<DoanhThuNgay> DoanhThu7Ngay { get; set; } = new List<DoanhThuNgay>();
         public List<DoanhThuThang> DoanhThuTheoThang { get; set; } = new List<DoanhThuThang>();
     }
 
@@ -26,6 +27,12 @@ namespace QuanLyChuoiCaPhe.Web.ViewModels
     public class DoanhThuThang
     {
         public int Thang { get; set; }
+        public decimal DoanhThu { get; set; }
+    }
+
+    public class DoanhThuNgay
+    {
+        public DateTime Ngay { get; set; }
         public decimal DoanhThu { get; set; }
     }
 }

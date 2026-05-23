@@ -1,6 +1,31 @@
-@model IEnumerable<TonKhoNguyenLieu>
+﻿@model IEnumerable<TonKhoNguyenLieu>
 @{
     ViewData["Title"] = "Tồn kho Nguyên liệu";
+
+    bool IsMeasurableUnit(string? unit)
+    {
+        if (string.IsNullOrWhiteSpace(unit)) return false;
+
+        var normalized = unit.Trim().ToLowerInvariant();
+        var measurableUnits = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "kg", "g", "gram", "l", "lit", "lít", "ml"
+        };
+
+        return measurableUnits.Contains(normalized);
+    }
+
+    string FormatByUnit(decimal value, string? unit)
+    {
+        if (IsMeasurableUnit(unit))
+        {
+            return value.ToString("N2");
+        }
+
+        // Đơn vị đếm (cái/cây/ly/...) hiển thị số nguyên.
+        var roundedInteger = Convert.ToInt32(Math.Round(value, MidpointRounding.AwayFromZero));
+        return roundedInteger.ToString("N0");
+    }
 }
 
 <div class="container-fluid p-4">
@@ -57,12 +82,14 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
+                            var donViTinh = item.NguyenLieu?.DonViTinh;
+
                             <tr class="@(item.SoLuongTon <= item.MucCanhBao ? "table-warning" : "")">
                                 <td>@item.ChiNhanh?.TenChiNhanh</td>
                                 <td><strong>@item.NguyenLieu?.TenNguyenLieu</strong></td>
-                                <td>@item.NguyenLieu?.DonViTinh</td>
-                                <td>@item.SoLuongTon.ToString("N2")</td>
-                                <td>@item.MucCanhBao.ToString("N2")</td>
+                                <td>@donViTinh</td>
+                                <td>@FormatByUnit(item.SoLuongTon, donViTinh)</td>
+                                <td>@FormatByUnit(item.MucCanhBao, donViTinh)</td>
                                 <td>
                                     @if (item.SoLuongTon <= item.MucCanhBao)
                                     {
