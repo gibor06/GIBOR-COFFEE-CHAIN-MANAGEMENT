@@ -1,40 +1,21 @@
-﻿@model IEnumerable<TonKhoNguyenLieu>
+@using QuanLyChuoiCaPhe.Web.Services
+@model IEnumerable<TonKhoNguyenLieu>
 @{
     ViewData["Title"] = "Tồn kho Nguyên liệu";
-
-    bool IsMeasurableUnit(string? unit)
-    {
-        if (string.IsNullOrWhiteSpace(unit)) return false;
-
-        var normalized = unit.Trim().ToLowerInvariant();
-        var measurableUnits = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "kg", "g", "gram", "l", "lit", "lít", "ml"
-        };
-
-        return measurableUnits.Contains(normalized);
-    }
-
-    string FormatByUnit(decimal value, string? unit)
-    {
-        if (IsMeasurableUnit(unit))
-        {
-            return value.ToString("N2");
-        }
-
-        // Đơn vị đếm (cái/cây/ly/...) hiển thị số nguyên.
-        var roundedInteger = Convert.ToInt32(Math.Round(value, MidpointRounding.AwayFromZero));
-        return roundedInteger.ToString("N0");
-    }
 }
+
+@Html.AntiForgeryToken()
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="bi bi-box-seam"></i> Tồn kho Nguyên liệu</h2>
         <div>
-            <a asp-action="GiaoDich" class="btn btn-coffee">
-                <i class="bi bi-arrow-left-right"></i> Giao dịch kho
-            </a>
+            @if (!User.IsInRole("QUAN_LY"))
+            {
+                <a asp-action="GiaoDich" class="btn btn-coffee">
+                    <i class="bi bi-arrow-left-right"></i> Giao dịch kho
+                </a>
+            }
             <a asp-action="CanhBao" class="btn btn-warning">
                 <i class="bi bi-exclamation-triangle"></i> Cảnh báo
             </a>
@@ -45,13 +26,24 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-6">
-                    <select name="chiNhanh" class="form-select">
-                        <option value="">-- Tất cả chi nhánh --</option>
-                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
-                        {
-                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
-                        }
-                    </select>
+                    @if (User.IsInRole("QUAN_LY"))
+                    {
+                        var cnList = ViewBag.ChiNhanhs as List<ChiNhanh>;
+                        var currentCn = cnList?.FirstOrDefault();
+                        <div class="form-control-plaintext font-weight-bold" style="font-size: 1.1rem; color: #8B4513;">
+                            <i class="bi bi-shop"></i> Chi nhánh: <strong>@(currentCn?.TenChiNhanh ?? "Chưa xác định")</strong>
+                        </div>
+                    }
+                    else
+                    {
+                        <select name="chiNhanh" class="form-select">
+                            <option value="">-- Tất cả chi nhánh --</option>
+                            @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                            {
+                                <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                            }
+                        </select>
+                    }
                 </div>
                 <div class="col-md-6">
                     <button type="submit" class="btn btn-primary">
@@ -68,7 +60,7 @@
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
                             <th>Chi nhánh</th>
@@ -76,7 +68,10 @@
                             <th>Đơn vị tính</th>
                             <th>Số lượng tồn</th>
                             <th>Mức cảnh báo</th>
+                            <th>Hạn sử dụng</th>
+                            <th>Số lượng đã đặt</th>
                             <th>Trạng thái</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,12 +79,19 @@
                         {
                             var donViTinh = item.NguyenLieu?.DonViTinh;
 
-                            <tr class="@(item.SoLuongTon <= item.MucCanhBao ? "table-warning" : "")">
+                            <tr class="@(item.SoLuongTon <= item.MucCanhBao ? "table-warning" : "") row-tonkho"
+                                data-chinhanh="@item.MaChiNhanh"
+                                data-nguyenlieu="@item.MaNguyenLieu"
+                                data-tennguyenlieu="@item.NguyenLieu?.TenNguyenLieu"
+                                data-hansudung="@(item.HanSuDung?.ToString("yyyy-MM-dd") ?? "")"
+                                data-dadat="@item.SoLuongDaDat">
                                 <td>@item.ChiNhanh?.TenChiNhanh</td>
                                 <td><strong>@item.NguyenLieu?.TenNguyenLieu</strong></td>
                                 <td>@donViTinh</td>
-                                <td>@FormatByUnit(item.SoLuongTon, donViTinh)</td>
-                                <td>@FormatByUnit(item.MucCanhBao, donViTinh)</td>
+                                <td>@FormatHelper.FormatByUnit(item.SoLuongTon, donViTinh)</td>
+                                <td>@FormatHelper.FormatByUnit(item.MucCanhBao, donViTinh)</td>
+                                <td class="hsd-cell">@(item.HanSuDung?.ToString("dd/MM/yyyy") ?? "Chưa thiết lập")</td>
+                                <td>@FormatHelper.FormatByUnit(item.SoLuongDaDat, donViTinh)</td>
                                 <td>
                                     @if (item.SoLuongTon <= item.MucCanhBao)
                                     {
@@ -99,7 +101,7 @@
                                     }
                                     else if (item.SoLuongTon <= item.MucCanhBao * 1.5m)
                                     {
-                                        <span class="badge bg-warning">
+                                        <span class="badge bg-warning text-dark">
                                             <i class="bi bi-exclamation-circle"></i> Sắp hết
                                         </span>
                                     }
@@ -110,6 +112,19 @@
                                         </span>
                                     }
                                 </td>
+                                <td>
+                                    @if (!User.IsInRole("QUAN_LY"))
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="openQuickEdit('@item.MaChiNhanh', '@item.MaNguyenLieu', `@item.NguyenLieu?.TenNguyenLieu`, '@(item.HanSuDung?.ToString("yyyy-MM-dd") ?? "")', '@item.SoLuongDaDat')">
+                                            <i class="bi bi-pencil-square"></i> Sửa nhanh
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted"><i class="bi bi-lock"></i> Xem</span>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -118,3 +133,112 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Quick Edit -->
+<div class="modal fade" id="quickEditModal" tabindex="-1" aria-labelledby="quickEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickEditModalLabel"><i class="bi bi-pencil-square"></i> Cập nhật nhanh Nguyên liệu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickEditForm">
+                <div class="modal-body">
+                    <input type="hidden" id="modalMaChiNhanh" name="maChiNhanh" />
+                    <input type="hidden" id="modalMaNguyenLieu" name="maNguyenLieu" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">Nguyên liệu</label>
+                        <input type="text" class="form-control-plaintext font-weight-bold" id="modalTenNguyenLieu" readonly />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalHanSuDung" class="form-label">Hạn sử dụng</label>
+                        <input type="date" class="form-control" id="modalHanSuDung" name="hanSuDung" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalSoLuongDaDat" class="form-label">Số lượng đã đặt</label>
+                        <input type="number" step="0.01" class="form-control" id="modalSoLuongDaDat" name="soLuongDaDat" required min="0" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveQuickEdit">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const rows = document.querySelectorAll(".row-tonkho");
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+            rows.forEach(row => {
+                const hsdStr = row.getAttribute("data-hansudung");
+                if (hsdStr) {
+                    const hsd = new Date(hsdStr);
+                    hsd.setHours(0,0,0,0);
+                    if (hsd <= now) {
+                        // Đã hết hạn
+                        row.classList.add("table-danger");
+                        const hsdCell = row.querySelector(".hsd-cell");
+                        if (hsdCell) {
+                            hsdCell.innerHTML += ' <br/><span class="badge bg-danger mt-1"><i class="bi bi-calendar-x"></i> Hết hạn</span>';
+                        }
+                    } else if (hsd <= threeDaysLater) {
+                        // Sắp hết hạn (< 3 ngày)
+                        row.style.borderLeft = "5px solid #dc3545";
+                        const hsdCell = row.querySelector(".hsd-cell");
+                        if (hsdCell) {
+                            hsdCell.innerHTML += ' <br/><span class="badge bg-danger mt-1"><i class="bi bi-exclamation-octagon"></i> Hạn &lt; 3 ngày</span>';
+                        }
+                    }
+                }
+            });
+        });
+
+        function openQuickEdit(maChiNhanh, maNguyenLieu, tenNguyenLieu, hanSuDung, soLuongDaDat) {
+            document.getElementById("modalMaChiNhanh").value = maChiNhanh;
+            document.getElementById("modalMaNguyenLieu").value = maNguyenLieu;
+            document.getElementById("modalTenNguyenLieu").value = tenNguyenLieu;
+            document.getElementById("modalHanSuDung").value = hanSuDung;
+            document.getElementById("modalSoLuongDaDat").value = parseFloat(soLuongDaDat) || 0;
+            
+            var myModal = new bootstrap.Modal(document.getElementById('quickEditModal'));
+            myModal.show();
+        }
+
+        document.getElementById("quickEditForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('@Url.Action("UpdateQuick", "Kho")', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.message || 'Có lỗi xảy ra khi cập nhật.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi hệ thống xảy ra.');
+            });
+        });
+    </script>
+}

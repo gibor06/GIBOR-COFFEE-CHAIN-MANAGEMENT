@@ -67,10 +67,15 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(HeThongTaiKhoan model, string? maNV)
+        public async Task<IActionResult> Create(HeThongTaiKhoan model, string? maNV, string? confirmPassword)
         {
             // Remove validation for auto-generated fields
             ModelState.Remove("MaTK");
+
+            if (model.MatKhauHash != confirmPassword)
+            {
+                ModelState.AddModelError("confirmPassword", "Mật khẩu xác nhận không khớp!");
+            }
 
             if (!ModelState.IsValid)
             {
@@ -109,19 +114,25 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     return View(model);
                 }
 
-                // Tạo mã tài khoản tự động
-                var lastTK = await _context.HeThongTaiKhoans
-                    .OrderByDescending(t => t.MaTK)
-                    .FirstOrDefaultAsync();
-                
-                int nextNumber = 1;
-                if (lastTK != null && lastTK.MaTK.StartsWith("TK"))
+                // Tạo mã tài khoản tự động bằng cách tìm số lớn nhất thực tế để tránh lỗi trùng lặp khi định dạng cũ không đồng nhất
+                var taiKhoans = await _context.HeThongTaiKhoans.AsNoTracking().ToListAsync();
+                int maxNumber = 0;
+                foreach (var tk in taiKhoans)
                 {
-                    if (int.TryParse(lastTK.MaTK.Substring(2), out int lastNumber))
+                    var maTKTrim = tk.MaTK.Trim();
+                    if (maTKTrim.StartsWith("TK"))
                     {
-                        nextNumber = lastNumber + 1;
+                        var numberPart = maTKTrim.Substring(2);
+                        if (int.TryParse(numberPart, out int num))
+                        {
+                            if (num > maxNumber)
+                            {
+                                maxNumber = num;
+                            }
+                        }
                     }
                 }
+                int nextNumber = maxNumber + 1;
                 model.MaTK = $"TK{nextNumber:D3}";
 
                 // Set ngày tạo

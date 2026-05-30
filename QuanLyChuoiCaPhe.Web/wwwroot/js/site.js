@@ -11,6 +11,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto active sidebar based on current URL path (using jQuery)
+    var currentPath = window.location.pathname.toLowerCase();
+    var matched = false;
+    
+    var sortedLinks = $('#sidebar .sidebar-menu a').toArray().sort(function(a, b) {
+        var hrefA = $(a).attr('href') || '';
+        var hrefB = $(b).attr('href') || '';
+        return hrefB.length - hrefA.length;
+    });
+
+    $.each(sortedLinks, function() {
+        var href = $(this).attr('href');
+        if (!href || href === '#' || href === '/') return true;
+        
+        var linkPath = href.toLowerCase().split('?')[0];
+        if (currentPath === linkPath || (linkPath !== '/' && currentPath.indexOf(linkPath) === 0)) {
+            $('#sidebar .sidebar-menu li').removeClass('active');
+            $(this).closest('li').addClass('active');
+            
+            // Bung các khối menu cha nếu có
+            var parentCollapse = $(this).closest('.collapse');
+            if (parentCollapse.length) {
+                parentCollapse.addClass('show');
+            }
+            matched = true;
+            return false;
+        }
+    });
+
+    if (!matched && (currentPath === '/' || currentPath === '/dashboard' || currentPath === '/dashboard/index')) {
+        $('#sidebar .sidebar-menu li').first().addClass('active');
+    }
+
     // Auto dismiss alerts after 5 seconds
     setTimeout(function() {
         const alerts = document.querySelectorAll('.alert');
@@ -110,14 +143,20 @@ function printDiv(divId) {
 // ===== EXPORT TO EXCEL =====
 function exportTableToExcel(tableId, filename = 'export') {
     const table = document.getElementById(tableId);
+    if (!table) return;
     const html = table.outerHTML;
-    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+    // Sử dụng Blob kèm ký tự Byte-Order Mark (BOM UTF-8) giúp Excel hiển thị tiếng Việt hoàn hảo
+    const blob = new Blob(['\ufeff' + html], {
+        type: 'application/vnd.ms-excel;charset=utf-8;'
+    });
+    const url = URL.createObjectURL(blob);
     const downloadLink = document.createElement('a');
     document.body.appendChild(downloadLink);
     downloadLink.href = url;
     downloadLink.download = filename + '.xls';
     downloadLink.click();
     document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url);
 }
 
 // ===== VALIDATE PHONE NUMBER =====

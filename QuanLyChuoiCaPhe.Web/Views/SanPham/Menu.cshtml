@@ -9,23 +9,41 @@
     <div class="card mb-3">
         <div class="card-body">
             <form method="get" class="row g-3">
-                <div class="col-md-6">
-                    <select name="chiNhanh" class="form-select">
-                        <option value="">-- Tất cả chi nhánh --</option>
-                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
-                        {
-                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Lọc
-                    </button>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Quay lại
-                    </a>
-                </div>
+                @if (ViewBag.CurrentVaiTro == "QUAN_LY")
+                {
+                    var currentBranch = (ViewBag.ChiNhanhs as List<ChiNhanh>)?.FirstOrDefault(c => c.MaChiNhanh == ViewBag.CurrentMaChiNhanh);
+                    <div class="col-md-6 d-flex align-items-center">
+                        <span class="fw-bold text-success fs-6">
+                            <i class="bi bi-shop"></i> Chi nhánh đang quản lý: GIBOR Coffee @(currentBranch?.TenChiNhanh ?? "")
+                        </span>
+                        <input type="hidden" name="chiNhanh" value="@ViewBag.CurrentMaChiNhanh" />
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="col-md-6">
+                        <select name="chiNhanh" class="form-select">
+                            <option value="">-- Tất cả chi nhánh --</option>
+                            @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                            {
+                                <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Lọc
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
+                    </div>
+                }
             </form>
         </div>
     </div>

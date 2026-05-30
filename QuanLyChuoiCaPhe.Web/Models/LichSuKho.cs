@@ -29,5 +29,11 @@ namespace QuanLyChuoiCaPhe.Web.Models
         
         [StringLength(255)]
         public string? GhiChu { get; set; }
+
+        [ForeignKey("MaChiNhanh")]
+        public virtual ChiNhanh? ChiNhanh { get; set; }
+
+        [ForeignKey("MaNguyenLieu")]
+        public virtual NguyenLieu? NguyenLieu { get; set; }
     }
 }

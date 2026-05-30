@@ -68,6 +68,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 session.SetString("MaTK", taiKhoan.MaTK);
                 session.SetString("TenDangNhap", taiKhoan.TenDangNhap);
                 session.SetString("VaiTro", taiKhoan.VaiTro);
+                session.SetString("UserRole", taiKhoan.VaiTro);
                 
                 // Lấy thông tin nhân viên nếu không phải ADMIN
                 if (taiKhoan.VaiTro != "ADMIN")

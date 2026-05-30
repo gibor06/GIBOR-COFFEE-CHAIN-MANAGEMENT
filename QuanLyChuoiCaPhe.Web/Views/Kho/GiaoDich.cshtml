@@ -8,23 +8,30 @@
 
     <div class="card mt-3">
         <div class="card-body">
-            <form asp-action="GiaoDich" method="post">
+            <form asp-action="GiaoDich" method="post" id="giaoDichForm">
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Chi nhánh</label>
-                        <select asp-for="MaChiNhanh" class="form-select" asp-items="ViewBag.ChiNhanhs"></select>
+                        <select asp-for="MaChiNhanh" class="form-select" id="maChiNhanhSelect" asp-items="ViewBag.ChiNhanhs"></select>
                         <span asp-validation-for="MaChiNhanh" class="text-danger"></span>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Nguyên liệu</label>
-                        <select asp-for="MaNguyenLieu" class="form-select" asp-items="ViewBag.NguyenLieus"></select>
+                        <input type="hidden" asp-for="MaNguyenLieu" id="hiddenMaNguyenLieu" />
+                        <input type="text" id="nguyenLieuSearch" class="form-control" list="nguyenLieuList" placeholder="Nhập tên nguyên liệu để tìm..." required autocomplete="off" />
+                        <datalist id="nguyenLieuList">
+                            @foreach (var nl in ViewBag.NguyenLieuRawList as List<NguyenLieu>)
+                            {
+                                <option value="@nl.TenNguyenLieu" data-id="@nl.MaNguyenLieu">@nl.TenNguyenLieu (@nl.DonViTinh)</option>
+                            }
+                        </datalist>
                         <span asp-validation-for="MaNguyenLieu" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Loại giao dịch</label>
-                        <select asp-for="LoaiGiaoDich" class="form-select">
+                        <select asp-for="LoaiGiaoDich" class="form-select" id="loaiGiaoDichSelect">
                             <option value="">-- Chọn loại --</option>
                             <option value="Nhập">Nhập</option>
                             <option value="Xuất">Xuất</option>
@@ -35,15 +42,19 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Số lượng</label>
-                        <input asp-for="SoLuong" type="number" step="0.01" class="form-control" />
-                        <span asp-validation-for="SoLuong" class="text-danger"></span>
+                        <div class="input-group">
+                            <input asp-for="SoLuong" type="number" step="0.01" class="form-control" id="soLuongInput" value="1" min="0.01" />
+                            <span class="input-group-text" id="donViTinhAddon">đơn vị</span>
+                        </div>
+                        <div id="tonKhoHienTaiContainer" class="form-text text-primary mt-1 fw-bold" style="display:none;"></div>
+                        <span asp-validation-for="SoLuong" class="text-danger d-block" id="validationSoLuongMsg"></span>
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Ghi chú</label>
                     <textarea asp-for="GhiChu" class="form-control" rows="3"></textarea>
                 </div>
-                <button type="submit" class="btn btn-coffee">
+                <button type="submit" class="btn btn-coffee" id="btnSubmitGiaoDich">
                     <i class="bi bi-save"></i> Ghi nhận
                 </button>
                 <a asp-action="Index" class="btn btn-secondary">
@@ -56,4 +67,131 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    
+    <script>
+        let currentStock = 0;
+        let isMeasurable = false;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const nguyenLieuSearch = document.getElementById("nguyenLieuSearch");
+            const hiddenMaNguyenLieu = document.getElementById("hiddenMaNguyenLieu");
+            const maChiNhanhSelect = document.getElementById("maChiNhanhSelect");
+            const loaiGiaoDichSelect = document.getElementById("loaiGiaoDichSelect");
+            const soLuongInput = document.getElementById("soLuongInput");
+            const btnSubmit = document.getElementById("btnSubmitGiaoDich");
+            const validationMsg = document.getElementById("validationSoLuongMsg");
+            const datalist = document.getElementById("nguyenLieuList");
+
+            // Event gõ/chọn trong datalist nguyên liệu
+            nguyenLieuSearch.addEventListener("input", function() {
+                const val = this.value;
+                let foundId = "";
+                let matchedOption = null;
+
+                Array.from(datalist.options).forEach(opt => {
+                    if (opt.value === val) {
+                        foundId = opt.getAttribute("data-id");
+                        matchedOption = opt;
+                    }
+                });
+
+                hiddenMaNguyenLieu.value = foundId;
+                
+                if (foundId) {
+                    fetchStock();
+                } else {
+                    hideStockContainer();
+                }
+                validateForm();
+            });
+
+            // Khi thay đổi chi nhánh
+            maChiNhanhSelect.addEventListener("change", function() {
+                if (hiddenMaNguyenLieu.value) {
+                    fetchStock();
+                }
+            });
+
+            // Khi thay đổi loại giao dịch hoặc số lượng
+            loaiGiaoDichSelect.addEventListener("change", validateForm);
+            soLuongInput.addEventListener("input", validateForm);
+
+            // Hàm fetch số lượng tồn kho hiện tại qua API
+            function fetchStock() {
+                const maNguyenLieu = hiddenMaNguyenLieu.value;
+                const maChiNhanh = maChiNhanhSelect.value;
+                
+                if (!maNguyenLieu || !maChiNhanh) return;
+
+                fetch(`@Url.Action("GetTonKhoHienTai", "Kho")?maNguyenLieu=${maNguyenLieu}&maChiNhanh=${maChiNhanh}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        currentStock = parseFloat(data.soLuongTon) || 0;
+                        const dv = data.donViTinh || "đơn vị";
+                        document.getElementById("donViTinhAddon").textContent = dv;
+                        
+                        // Xác định xem có phải là đơn vị đo lường (kg, lít, ml, l)
+                        const measurableUnits = ["kg", "g", "gram", "l", "lit", "lít", "ml"];
+                        isMeasurable = measurableUnits.includes(dv.toLowerCase().trim());
+                        
+                        const container = document.getElementById("tonKhoHienTaiContainer");
+                        
+                        // Định dạng hiển thị
+                        let displayStock = "";
+                        if (isMeasurable) {
+                            displayStock = currentStock.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        } else {
+                            displayStock = Math.round(currentStock).toLocaleString('vi-VN');
+                        }
+
+                        container.innerHTML = `<i class="bi bi-info-circle-fill"></i> Tồn hiện tại: ${displayStock} ${dv}`;
+                        container.style.display = "block";
+                        
+                        validateForm();
+                    })
+                    .catch(err => console.error("Error fetching stock:", err));
+            }
+
+            function hideStockContainer() {
+                currentStock = 0;
+                document.getElementById("donViTinhAddon").textContent = "đơn vị";
+                document.getElementById("tonKhoHienTaiContainer").style.display = "none";
+                validateForm();
+            }
+
+            // Hàm validate nghiệp vụ nhập/xuất kho bằng JS
+            function validateForm() {
+                const qtyVal = parseFloat(soLuongInput.value);
+                const actionType = loaiGiaoDichSelect.value;
+                const maNL = hiddenMaNguyenLieu.value;
+                
+                let isValid = true;
+                let errorMsg = "";
+
+                if (!maNL) {
+                    isValid = false;
+                } else if (isNaN(qtyVal) || qtyVal <= 0) {
+                    isValid = false;
+                    errorMsg = "Số lượng nhập phải lớn hơn 0.";
+                } else if (actionType === "Xuất" || actionType === "Hao hụt" || actionType === "Hết hạn") {
+                    if (qtyVal > currentStock) {
+                        isValid = false;
+                        errorMsg = `Số lượng yêu cầu (${qtyVal}) lớn hơn số lượng tồn hiện tại (${currentStock}). Không thể thực hiện giao dịch xuất kho!`;
+                    }
+                }
+
+                if (isValid) {
+                    btnSubmit.disabled = false;
+                    validationMsg.textContent = "";
+                    soLuongInput.classList.remove("is-invalid");
+                } else {
+                    btnSubmit.disabled = true;
+                    if (errorMsg) {
+                        validationMsg.textContent = errorMsg;
+                        soLuongInput.classList.add("is-invalid");
+                    }
+                }
+            }
+        });
+    </script>
 }

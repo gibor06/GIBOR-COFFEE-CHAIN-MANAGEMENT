@@ -1,3 +1,4 @@
+@using QuanLyChuoiCaPhe.Web.Services
 @model IEnumerable<LichSuKho>
 @{
     ViewData["Title"] = "Lịch sử Kho";
@@ -11,29 +12,48 @@
         </a>
     </div>
 
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger mb-3"></div>
+    }
+
     <div class="card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-3">
+            <form method="get" class="row g-3" id="historyFilterForm">
                 <div class="col-md-3">
-                    <select name="chiNhanh" class="form-select">
-                        <option value="">-- Tất cả chi nhánh --</option>
-                        @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
-                        {
-                            <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
-                        }
-                    </select>
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Chi nhánh</label>
+                    @if (User.IsInRole("QUAN_LY"))
+                    {
+                        var cnList = ViewBag.ChiNhanhs as List<ChiNhanh>;
+                        var currentCn = cnList?.FirstOrDefault();
+                        <div class="form-control-plaintext font-weight-bold" style="color: #8B4513;">
+                            <strong>@(currentCn?.TenChiNhanh ?? "Chưa xác định")</strong>
+                        </div>
+                    }
+                    else
+                    {
+                        <select name="chiNhanh" class="form-select">
+                            <option value="">-- Tất cả chi nhánh --</option>
+                            @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
+                            {
+                                <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                            }
+                        </select>
+                    }
                 </div>
                 <div class="col-md-3">
-                    <input type="date" name="tuNgay" class="form-control" value="@ViewBag.TuNgay" />
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Từ ngày</label>
+                    <input type="date" name="tuNgay" id="tuNgay" class="form-control" placeholder="dd/mm/yyyy" value="@ViewBag.TuNgay" />
                 </div>
                 <div class="col-md-3">
-                    <input type="date" name="denNgay" class="form-control" value="@ViewBag.DenNgay" />
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Đến ngày</label>
+                    <input type="date" name="denNgay" id="denNgay" class="form-control" placeholder="dd/mm/yyyy" value="@ViewBag.DenNgay" />
                 </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary">
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i> Lọc
                     </button>
-                    <a asp-action="LichSu" class="btn btn-secondary">
+                    <a asp-action="LichSu" class="btn btn-secondary" title="Làm mới">
                         <i class="bi bi-arrow-clockwise"></i>
                     </a>
                 </div>
@@ -43,46 +63,71 @@
 
     <div class="card">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Thời gian</th>
-                            <th>Loại GD</th>
-                            <th>Chi nhánh</th>
-                            <th>Nguyên liệu</th>
-                            <th>Số lượng</th>
-                            <th>Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
+            @if (Model != null && Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <td>@item.ThoiGian.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>
-                                    @if (item.LoaiGiaoDich == "Nhập")
-                                    {
-                                        <span class="badge bg-success">@item.LoaiGiaoDich</span>
-                                    }
-                                    else if (item.LoaiGiaoDich == "Xuất")
-                                    {
-                                        <span class="badge bg-primary">@item.LoaiGiaoDich</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">@item.LoaiGiaoDich</span>
-                                    }
-                                </td>
-                                <td>@item.MaChiNhanh</td>
-                                <td>@item.MaNguyenLieu</td>
-                                <td><strong>@item.SoLuong.ToString("N2")</strong></td>
-                                <td>@item.GhiChu</td>
+                                <th>Thời gian</th>
+                                <th>Loại GD</th>
+                                <th>Chi nhánh</th>
+                                <th>Nguyên liệu</th>
+                                <th>Số lượng</th>
+                                <th>Ghi chú</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.ThoiGian.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        @if (item.LoaiGiaoDich == "Nhập")
+                                        {
+                                            <span class="badge bg-success">@item.LoaiGiaoDich</span>
+                                        }
+                                        else if (item.LoaiGiaoDich == "Xuất")
+                                        {
+                                            <span class="badge bg-primary">@item.LoaiGiaoDich</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">@item.LoaiGiaoDich</span>
+                                        }
+                                    </td>
+                                    <td>@(item.ChiNhanh?.TenChiNhanh ?? item.MaChiNhanh)</td>
+                                    <td>@(item.NguyenLieu?.TenNguyenLieu ?? item.MaNguyenLieu)</td>
+                                    <td><strong>@FormatHelper.FormatByUnit(item.SoLuong, item.NguyenLieu?.DonViTinh)</strong> @item.NguyenLieu?.DonViTinh</td>
+                                    <td>@item.GhiChu</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center m-0">
+                    <i class="bi bi-info-circle"></i> Không tìm thấy giao dịch phù hợp.
+                </div>
+            }
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('historyFilterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            const tuNgayVal = document.getElementById('tuNgay').value;
+            const denNgayVal = document.getElementById('denNgay').value;
+            if (tuNgayVal && denNgayVal && new Date(tuNgayVal) > new Date(denNgayVal)) {
+                e.preventDefault();
+                alert('Lỗi: Khoảng thời gian không hợp lệ: "Từ ngày" phải nhỏ hơn hoặc bằng "Đến ngày"!');
+            }
+        });
+    }
+});
+</script>

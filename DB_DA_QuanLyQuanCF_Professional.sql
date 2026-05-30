@@ -20,6 +20,8 @@ GO
 USE QuanLyChuoiCaPhe;
 GO
 
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
 SET NOCOUNT ON; -- Không đếm các dòng thực thi
 GO
 
@@ -58,6 +60,7 @@ IF OBJECT_ID(N'dbo.TRG_ChiTietDonHang_CapNhatTongTien', N'TR') IS NOT NULL DROP 
 IF OBJECT_ID(N'dbo.TRG_DonHang_CapNhatDiem', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_DonHang_CapNhatDiem;
 GO
 
+IF OBJECT_ID(N'dbo.HanhTrinhDonHang', N'U') IS NOT NULL DROP TABLE dbo.HanhTrinhDonHang;
 IF OBJECT_ID(N'dbo.ChiTietDonHang', N'U') IS NOT NULL DROP TABLE dbo.ChiTietDonHang;
 IF OBJECT_ID(N'dbo.DonHang', N'U') IS NOT NULL DROP TABLE dbo.DonHang;
 IF OBJECT_ID(N'dbo.KhachHang', N'U') IS NOT NULL DROP TABLE dbo.KhachHang;
@@ -72,12 +75,12 @@ IF OBJECT_ID(N'dbo.BienTheSanPham', N'U') IS NOT NULL DROP TABLE dbo.BienTheSanP
 IF OBJECT_ID(N'dbo.SanPham_ChiNhanh', N'U') IS NOT NULL DROP TABLE dbo.SanPham_ChiNhanh;
 IF OBJECT_ID(N'dbo.SanPham', N'U') IS NOT NULL DROP TABLE dbo.SanPham;
 IF OBJECT_ID(N'dbo.DanhMuc', N'U') IS NOT NULL DROP TABLE dbo.DanhMuc;
-IF OBJECT_ID(N'dbo.BangLuong', N'U') IS NOT NULL DROP TABLE dbo.BangLuong;
 IF OBJECT_ID(N'dbo.PhatDiMuon', N'U') IS NOT NULL DROP TABLE dbo.PhatDiMuon;
 IF OBJECT_ID(N'dbo.ChamCong', N'U') IS NOT NULL DROP TABLE dbo.ChamCong;
 IF OBJECT_ID(N'dbo.LichPhanCong', N'U') IS NOT NULL DROP TABLE dbo.LichPhanCong;
 IF OBJECT_ID(N'dbo.NgayDacBiet', N'U') IS NOT NULL DROP TABLE dbo.NgayDacBiet;
 IF OBJECT_ID(N'dbo.CaLamViec', N'U') IS NOT NULL DROP TABLE dbo.CaLamViec;
+IF OBJECT_ID(N'dbo.BangLuong', N'U') IS NOT NULL DROP TABLE dbo.BangLuong;
 IF OBJECT_ID(N'dbo.TaiKhoanNhanVien', N'U') IS NOT NULL DROP TABLE dbo.TaiKhoanNhanVien;
 IF OBJECT_ID(N'dbo.ThongTinNhanVien', N'U') IS NOT NULL DROP TABLE dbo.ThongTinNhanVien;
 IF OBJECT_ID(N'dbo.ChucVuNhanVien', N'U') IS NOT NULL DROP TABLE dbo.ChucVuNhanVien;
@@ -247,19 +250,46 @@ CREATE TABLE dbo.ThongTinNhanVien
     NgayVaoLam      DATE            NOT NULL,
     NgayNghiViec    DATE            NULL,
     SoDienThoai     VARCHAR(10)     NOT NULL,
-    SoCanCuoc       VARCHAR(12)     NOT NULL,
+    SoCCCD          VARCHAR(12)     NULL,
     Email           VARCHAR(100)    NULL,
     TrangThai       BIT             NOT NULL CONSTRAINT DF_ThongTinNhanVien_TrangThai DEFAULT 1,
     CONSTRAINT PK_ThongTinNhanVien PRIMARY KEY (MaNV),
     CONSTRAINT FK_ThongTinNhanVien_ChucVu FOREIGN KEY (MaChucVu) REFERENCES dbo.ChucVuNhanVien(MaChucVu),
     CONSTRAINT FK_ThongTinNhanVien_ChiNhanh FOREIGN KEY (MaChiNhanh) REFERENCES dbo.ChiNhanh(MaChiNhanh),
-    CONSTRAINT UQ_ThongTinNhanVien_CCCD UNIQUE (SoCanCuoc),
     CONSTRAINT UQ_ThongTinNhanVien_SDT UNIQUE (SoDienThoai),
     CONSTRAINT CHK_ThongTinNhanVien_Loai CHECK (LoaiNV IN (1,2)),
     CONSTRAINT CHK_ThongTinNhanVien_SDT CHECK (SoDienThoai NOT LIKE '%[^0-9]%' AND LEN(SoDienThoai)=10),
-    CONSTRAINT CHK_ThongTinNhanVien_CCCD CHECK (SoCanCuoc NOT LIKE '%[^0-9]%' AND LEN(SoCanCuoc)=12),
     CONSTRAINT CHK_ThongTinNhanVien_Ngay CHECK (NgayNghiViec IS NULL OR NgayNghiViec >= NgayVaoLam)
 );
+GO
+
+-- BẮT ĐẦU TRẦN DƯƠNG GIA BẢO CHỈNH SỬA
+-- Khởi tạo Filtered Unique Index: Loại bỏ các giá trị NULL ra khỏi chỉ mục duy nhất để cho phép để trống nhiều dòng
+IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'UQ_NhanVien_CCCD_Filtered' AND object_id = OBJECT_ID('dbo.ThongTinNhanVien'))
+BEGIN
+    DROP INDEX UQ_NhanVien_CCCD_Filtered ON dbo.ThongTinNhanVien;
+END
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UQ_NhanVien_CCCD_Filtered 
+ON dbo.ThongTinNhanVien(SoCCCD) 
+WHERE SoCCCD IS NOT NULL;
+GO
+
+-- Thiết lập Check Constraint cấu trúc phủ định kép chặn hoàn toàn ký tự chữ
+IF EXISTS (SELECT * FROM sys.objects WHERE name = 'CHK_NhanVien_CCCD' AND type = 'C')
+BEGIN
+    ALTER TABLE dbo.ThongTinNhanVien DROP CONSTRAINT CHK_NhanVien_CCCD;
+END
+GO
+
+ALTER TABLE dbo.ThongTinNhanVien ADD CONSTRAINT CHK_NhanVien_CCCD 
+CHECK (
+    LEN(SoCCCD) = 12                     -- Bắt buộc chuỗi đạt độ dài chuẩn 12 ký tự
+    AND SoCCCD NOT LIKE '%[^0-9]%'       -- Nếu tìm thấy bất kỳ ký tự nào ngoài khoảng từ 0 đến 9 sẽ trả về FALSE
+);
+GO
+-- KẾT THÚC TRẦN DƯƠNG GIA BẢO CHỈNH SỬA
 /*
                 Chức năng:
         •	Quản lý thông tin cá nhân và tình trạng làm việc của nhân viên.
@@ -642,9 +672,30 @@ CREATE TABLE dbo.DonHang
     CONSTRAINT FK_DonHang_ChiNhanh FOREIGN KEY (MaChiNhanh) REFERENCES dbo.ChiNhanh(MaChiNhanh),
     CONSTRAINT FK_DonHang_NV FOREIGN KEY (MaNV) REFERENCES dbo.ThongTinNhanVien(MaNV),
     CONSTRAINT FK_DonHang_KH FOREIGN KEY (MaKH) REFERENCES dbo.KhachHang(MaKH),
-    CONSTRAINT CHK_DonHang_Tien CHECK (TongTien >= 0 AND GiamGia >= 0 AND GiamGia <= TongTien),
+    CONSTRAINT CHK_DonHang_Tien CHECK (
+        TongTien >= 0 
+        AND GiamGia >= 0 
+        AND (TrangThai = N'Khởi tạo' OR TrangThai = N'Hủy' OR GiamGia <= TongTien)
+    ),
     CONSTRAINT CHK_DonHang_TrangThai CHECK (TrangThai IN (N'Khởi tạo', N'Hoàn tất', N'Hủy')),
     CONSTRAINT CHK_DonHang_PTTT CHECK (PhuongThucThanhToan IN (N'Tiền mặt', N'Thẻ', N'Chuyển khoản', N'QR', N'Ví điện tử'))
+);
+GO
+
+IF EXISTS (SELECT * FROM sys.objects WHERE name = 'CHK_DonHang_Tien' AND type = 'C')
+BEGIN
+    ALTER TABLE dbo.DonHang DROP CONSTRAINT CHK_DonHang_Tien;
+END
+GO
+
+ALTER TABLE dbo.DonHang ADD CONSTRAINT CHK_DonHang_Tien CHECK (
+    -- Tổng tiền sau cùng của hóa đơn tuyệt đối không được là số âm
+    TongTien >= 0 
+    -- Số tiền chiết khấu giảm giá của Voucher không được nhỏ hơn 0
+    AND GiamGia >= 0 
+    -- Cho phép số tiền giảm giá lớn hơn tổng tiền khi đơn hàng ở trạng thái nháp (Khởi tạo) hoặc bị Hủy.
+    -- Chỉ bắt buộc kiểm tra số tiền giảm giá không vượt quá tổng tiền gốc khi đơn hàng đã chuyển trạng thái Hoàn tất.
+    AND (TrangThai = N'Khởi tạo' OR TrangThai = N'Hủy' OR GiamGia <= TongTien)
 );
 GO
 
@@ -663,6 +714,32 @@ CREATE TABLE dbo.ChiTietDonHang
     CONSTRAINT CHK_ChiTietDonHang_SoLuong CHECK (SoLuong > 0),
     CONSTRAINT CHK_ChiTietDonHang_DonGia CHECK (DonGia >= 0)
 );
+GO
+
+IF OBJECT_ID('dbo.HanhTrinhDonHang', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE dbo.HanhTrinhDonHang;
+END
+GO
+
+CREATE TABLE dbo.HanhTrinhDonHang
+(
+    MaHanhTrinh     INT IDENTITY(1,1) NOT NULL, -- Khóa chính tự động tăng định danh dòng lịch sử
+    MaDH            VARCHAR(20)       NOT NULL, -- Lưu mã đơn hàng (mở rộng lên VARCHAR(20) chống tràn dữ liệu)
+    HanhDong        NVARCHAR(255)     NOT NULL, -- Chuỗi văn bản mô tả hành động thao tác hóa đơn
+    NguoiThucHien   NVARCHAR(100)     NOT NULL, -- Lưu tên tài khoản của nhân viên phát sinh thao tác
+    ThoiGian        DATETIME2(0)      NOT NULL  -- Giờ hệ thống chính xác đến từng giây
+                    CONSTRAINT DF_HanhTrinhDonHang_ThoiGian DEFAULT SYSDATETIME(),
+    
+    CONSTRAINT PK_HanhTrinhDonHang PRIMARY KEY (MaHanhTrinh)
+);
+GO
+
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.HanhTrinhDonHang') AND name = 'MaDH')
+BEGIN
+    -- Mở rộng kích thước cột để chặn đứng lỗi 'String or binary data would be truncated'
+    ALTER TABLE dbo.HanhTrinhDonHang ALTER COLUMN MaDH VARCHAR(20) NOT NULL;
+END
 GO
 
 /* =============================================================================================================== */
@@ -1242,63 +1319,67 @@ CREATE PROCEDURE dbo.sp_TaoDonHang
     @MaKH CHAR(6) = NULL,
     @PhuongThucThanhToan NVARCHAR(30) = N'Tiền mặt',
     @GiamGia DECIMAL(18,2) = 0,
+    @MaVoucher INT = NULL,
     @MaBienThe1 CHAR(10) = NULL,
-    @SoLuong1 INT = NULL,
+    @SoLuong1 INT = 0,
     @MaBienThe2 CHAR(10) = NULL,
     @SoLuong2 INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-
     BEGIN TRY
-        BEGIN TRAN;
+        BEGIN TRANSACTION;
 
-        INSERT INTO dbo.DonHang(MaDH, MaChiNhanh, MaNV, MaKH, GiamGia, PhuongThucThanhToan, TrangThai)
-        VALUES (@MaDH, @MaChiNhanh, @MaNV, @MaKH, @GiamGia, @PhuongThucThanhToan, N'Khởi tạo');
-
-        IF @MaBienThe1 IS NOT NULL AND @SoLuong1 IS NOT NULL
+        -- BIỆN PHÁP RẼ NHÁNH LOGIC TỐI ƯU ĐƠN HÀNG TẠI QUẦY POS
+        IF @MaBienThe1 IS NULL
         BEGIN
-            INSERT INTO dbo.ChiTietDonHang(MaCTDH, MaDH, MaBienThe, SoLuong, DonGia)
-            SELECT 'CT' + RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS VARCHAR(8)), 8),
-                   @MaDH,
-                   bt.MaBienThe,
-                   @SoLuong1,
-                   sp.GiaCoBan + bt.GiaCongThem
+            -- LUỒNG A: Khởi tạo vỏ đơn hàng trống (C# sẽ thực hiện loop chèn danh sách chi tiết món sau)
+            -- Thiết lập trạng thái ban đầu là N'Khởi tạo' và tổng tiền bằng 0 để vượt qua Check Constraint
+            INSERT INTO dbo.DonHang (MaDH, NgayTao, TongTien, TrangThai, MaKH, MaNV, GiamGia, MaChiNhanh, PhuongThucThanhToan)
+            VALUES (@MaDH, SYSDATETIME(), 0, N'Khởi tạo', @MaKH, @MaNV, @GiamGia, @MaChiNhanh, @PhuongThucThanhToan);
+        END
+        ELSE
+        BEGIN
+            -- LUỒNG B: Tạo đơn hàng và chèn trực tiếp món ăn (Tương thích ngược luồng mã nguồn cũ)
+            DECLARE @DonGia1 DECIMAL(18,2) = 0;
+            SELECT @DonGia1 = sp.GiaCoBan + bt.GiaCongThem 
             FROM dbo.BienTheSanPham bt
             JOIN dbo.SanPham sp ON bt.MaSanPham = sp.MaSanPham
             WHERE bt.MaBienThe = @MaBienThe1;
-        END;
 
-        IF @MaBienThe2 IS NOT NULL AND @SoLuong2 IS NOT NULL
-        BEGIN
-            INSERT INTO dbo.ChiTietDonHang(MaCTDH, MaDH, MaBienThe, SoLuong, DonGia)
-            SELECT 'CT' + RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS VARCHAR(8)), 8),
-                   @MaDH,
-                   bt.MaBienThe,
-                   @SoLuong2,
-                   sp.GiaCoBan + bt.GiaCongThem
-            FROM dbo.BienTheSanPham bt
-            JOIN dbo.SanPham sp ON bt.MaSanPham = sp.MaSanPham
-            WHERE bt.MaBienThe = @MaBienThe2;
-        END;
+            DECLARE @ThanhTien DECIMAL(18,2) = @DonGia1 * @SoLuong1;
+            
+            DECLARE @DonGia2 DECIMAL(18,2) = 0;
+            IF @MaBienThe2 IS NOT NULL AND @SoLuong2 IS NOT NULL AND @SoLuong2 > 0
+            BEGIN
+                SELECT @DonGia2 = sp.GiaCoBan + bt.GiaCongThem 
+                FROM dbo.BienTheSanPham bt
+                JOIN dbo.SanPham sp ON bt.MaSanPham = sp.MaSanPham
+                WHERE bt.MaBienThe = @MaBienThe2;
+                
+                SET @ThanhTien = @ThanhTien + (@DonGia2 * @SoLuong2);
+            END
 
-        UPDATE dbo.DonHang
-        SET TongTien = dbo.fn_TinhTongTienDonHang(@MaDH)
-        WHERE MaDH = @MaDH;
+            -- Chèn DonHang với trạng thái Hoàn tất và tính toán TongTien
+            INSERT INTO dbo.DonHang (MaDH, NgayTao, TongTien, TrangThai, MaKH, MaNV, GiamGia, MaChiNhanh, PhuongThucThanhToan)
+            VALUES (@MaDH, SYSDATETIME(), CASE WHEN (@ThanhTien - @GiamGia) < 0 THEN 0 ELSE (@ThanhTien - @GiamGia) END, N'Hoàn tất', @MaKH, @MaNV, @GiamGia, @MaChiNhanh, @PhuongThucThanhToan);
 
-        IF EXISTS (SELECT 1 FROM dbo.DonHang WHERE MaDH = @MaDH AND GiamGia > TongTien)
-        BEGIN
-            THROW 50011, N'Giảm giá không được lớn hơn tổng tiền đơn hàng.', 1;
-        END;
+            -- Chèn món thứ 1
+            INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia)
+            VALUES ('CT' + RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS VARCHAR(8)), 8), @MaDH, @MaBienThe1, @SoLuong1, @DonGia1);
 
-        UPDATE dbo.DonHang
-        SET TrangThai = N'Hoàn tất'
-        WHERE MaDH = @MaDH;
+            -- Chèn món thứ 2 nếu có
+            IF @MaBienThe2 IS NOT NULL AND @SoLuong2 IS NOT NULL AND @SoLuong2 > 0
+            BEGIN
+                INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia)
+                VALUES ('CT' + RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS VARCHAR(8)), 8), @MaDH, @MaBienThe2, @SoLuong2, @DonGia2);
+            END
+        END
 
-        COMMIT TRAN;
+        COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
         THROW;
     END CATCH
 END;
@@ -1745,7 +1826,7 @@ INSERT INTO dbo.ChucVuNhanVien (MaChucVu, TenChucVu, LuongCoBanGio) VALUES
     ('CV00000050', N'Kế toán vận hành bậc 5', 43000.00);
 GO
 
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV01', 1, N'Trần Gia Bảo', 'CV01', 'CN00000001', '2023-04-05', NULL, '0782097999', '966616964501', 'gibor06.dev@giborcoffee.vn', 1),
     ('NV02', 1, N'Lê Quang Bảo', 'CV00000020', 'CN00000001', '2024-05-07', NULL, '0989679081', '966616984501', 'lequangbao@giborcoffee.vn', 1),
     ('NV03', 1, N'Nguyễn Ngọc Châu', 'CV00000050', 'CN00000001', '2022-06-09', NULL, '0789738566', '966616284501', 'nguyenngocchau@giborcoffee.vn', 1),
@@ -1753,7 +1834,7 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV05', 1, N'Trần Dương Gia Bảo', 'CV00000035', 'CN00000001', '2022-06-09', NULL, '0709038526', '214225158003', 'tranduonggiabao@giborcoffee.vn', 1)
 GO
 
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV00000001', 2, N'Trần Văn Khang', 'CV00000001', 'CN00000001', '2023-04-05', NULL, '0782037999', '966616964001', 'tranvankhang.01@giborcoffee.vn', 1),
     ('NV00000002', 2, N'Trần Phương Hiền', 'CV00000002', 'CN00000002', '2024-05-07', NULL, '0989639081', '966616974501', 'tranphuonghien.02@giborcoffee.vn', 1),
     ('NV00000003', 2, N'Hoàng Anh Đức', 'CV00000003', 'CN00000003', '2022-06-09', NULL, '0789038526', '211225158003', 'hoanganhduc.03@giborcoffee.vn', 1),
@@ -1765,7 +1846,7 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV00000009', 2, 'Phan Thanh Nam', 'CV00000009', 'CN00000009', '2022-12-21', NULL, '0767834855', '624557080009', 'phanthanhnam.09@giborcoffee.vn', 1),
     ('NV00000010', 2, N'Dương Thị Vy', 'CV00000010', 'CN00000010', '2023-01-23', NULL, '0706818112', '199104722010', 'duongthivy.10@giborcoffee.vn', 1);
 GO
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV00000011', 1, N'Đỗ Hữu Bảo', 'CV00000011', 'CN00000011', '2024-02-25', NULL, '0837135391', '147337803011', 'dohuubao.11@giborcoffee.vn', 1),
     ('NV00000012', 1, N'Phan Bảo Diễm', 'CV00000012', 'CN00000012', '2022-03-27', NULL, '0944769200', '927982963012', 'phanbaodiem.12@giborcoffee.vn', 1),
     ('NV00000013', 1, N'Phạm Quốc Đức', 'CV00000013', 'CN00000013', '2023-04-04', NULL, '0385511909', '381272327013', 'phamquocduc.13@giborcoffee.vn', 1),
@@ -1777,7 +1858,7 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV00000019', 1, N'Trần Quốc Đạt', 'CV00000019', 'CN00000019', '2023-10-16', NULL, '0357684996', '236843584019', 'tranquocdat.19@giborcoffee.vn', 1),
     ('NV00000020', 1, N'Phan Khánh Nhung', 'CV00000020', 'CN00000020', '2024-11-18', NULL, '0941373735', '491541578020', 'phankhanhnhung.20@giborcoffee.vn', 1);
 GO
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV00000021', 1, N'Phạm Thanh Bảo', 'CV00000021', 'CN00000021', '2022-12-20', NULL, '0948024342', '325567963021', 'phamthanhbao.21@giborcoffee.vn', 1),
     ('NV00000022', 1, N'Lê Mai An', 'CV00000022', 'CN00000022', '2023-01-22', NULL, '0389514287', '210373808022', 'lemaian.22@giborcoffee.vn', 1),
     ('NV00000023', 1, N'Phan Đức Nam', 'CV00000023', 'CN00000023', '2024-02-24', NULL, '0775146293', '536344399023', 'phanducnam.23@giborcoffee.vn', 1),
@@ -1789,7 +1870,7 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV00000029', 1, N'Nguyễn Gia Bảo', 'CV00000029', 'CN00000029', '2024-08-11', NULL, '0951343880', '141580226029', 'nguyengiabao.29@giborcoffee.vn', 1),
     ('NV00000030', 1, N'Nguyễn Quỳnh Nhung', 'CV00000030', 'CN00000030', '2022-09-13', NULL, '0829854548', '314289692030', 'nguyenquynhnhung.30@giborcoffee.vn', 1);
 GO
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV00000031', 1, N'Đặng Công Đạt', 'CV00000031', 'CN00000031', '2023-10-15', NULL, '0846930359', '427696198031', 'dangcongdat.31@giborcoffee.vn', 1),
     ('NV00000032', 1, N'Nguyễn Phương Chi', 'CV00000032', 'CN00000032', '2024-11-17', NULL, '0329920292', '125409494032', 'nguyenphuongchi.32@giborcoffee.vn', 1),
     ('NV00000033', 1, N'Dương Minh Bình', 'CV00000033', 'CN00000033', '2022-12-19', NULL, '0353481198', '452468587033', 'duongminhbinh.33@giborcoffee.vn', 1),
@@ -1801,7 +1882,7 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV00000039', 1, N'Đỗ Xuân Thành', 'CV00000039', 'CN00000039', '2022-06-06', NULL, '0705134794', '216396351039', 'doxuanthanh.39@giborcoffee.vn', 1),
     ('NV00000040', 1, N'Đặng Bảo Hương', 'CV00000040', 'CN00000040', '2023-07-08', NULL, '0846397338', '882269302040', 'dangbaohuong.40@giborcoffee.vn', 1);
 GO
-INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCanCuoc, Email, TrangThai) VALUES
+INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, NgayVaoLam, NgayNghiViec, SoDienThoai, SoCCCD, Email, TrangThai) VALUES
     ('NV00000041', 2, N'Phạm Gia Hiếu', 'CV00000041', 'CN00000041', '2024-08-10', NULL, '0758571795', '750911797041', 'phamgiahieu.41@giborcoffee.vn', 1),
     ('NV00000042', 2, N'Hoàng Mai Giang', 'CV00000042', 'CN00000042', '2022-09-12', NULL, '0951700055', '719106699042', 'hoangmaigiang.42@giborcoffee.vn', 1),
     ('NV00000043', 2, N'Đỗ Đức Nam', 'CV00000043', 'CN00000043', '2023-10-14', NULL, '0334188276', '147659674043', 'doducnam.43@giborcoffee.vn', 1),
@@ -1812,6 +1893,14 @@ INSERT INTO dbo.ThongTinNhanVien (MaNV, LoaiNV, HoTenNV, MaChucVu, MaChiNhanh, N
     ('NV00000048', 1, N'Lê Bảo Chi', 'CV00000048', 'CN00000048', '2022-03-24', NULL, '0768064830', '432091877048', 'lebaochi.48@giborcoffee.vn', 1),
     ('NV00000049', 1, N'Phạm Gia Khánh', 'CV00000049', 'CN00000049', '2023-04-26', NULL, '0843779528', '532074125049', 'phamgiakhanh.49@giborcoffee.vn', 1),
     ('NV00000050', 1, N'Lê Khánh Quỳnh', 'CV00000050', 'CN00000050', '2024-05-03', NULL, '0774411983', '236674237050', 'lekhanhquynh.50@giborcoffee.vn', 1);
+GO
+
+INSERT INTO dbo.TaiKhoanNhanVien (MaTK, MaNV) VALUES
+    ('TK00', 'NV01'),
+    ('TK02', 'NV02'),
+    ('TK03', 'NV03'),
+    ('TK04', 'NV04'),
+    ('TK01', 'NV05')
 GO
 
 INSERT INTO dbo.TaiKhoanNhanVien (MaTK, MaNV) VALUES
@@ -2985,32 +3074,22 @@ GO
 DISABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
 GO
 
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0101', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-03T08:07:00'),
-    ('DH0102', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-05-05T09:14:00'),
-    ('DH0103', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-07T10:21:00'),
-    ('DH0104', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-05-09T11:28:00'),
-    ('DH0105', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-11T12:35:00'),
-    ('DH0106', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-13T13:42:00'),
-    ('DH0107', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-05-15T14:49:00'),
-    ('DH0108', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-05-17T15:56:00'),
-    ('DH0109', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-05-19T16:03:00'),
-    ('DH0110', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-05-21T17:10:00');
+-- Tạm thời disable trigger để INSERT dữ liệu test
+DISABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
 GO
 
 INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0201', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-23T08:07:00'),
-    ('DH0202', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-05-23T09:14:00'),
-    ('DH0203', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-23T10:21:00'),
-    ('DH0204', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-05-23T11:28:00'),
-    ('DH0205', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-23T12:35:00'),
-    ('DH0206', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-05-23T13:42:00'),
-    ('DH0207', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-05-23T14:49:00'),
-    ('DH0208', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-05-23T15:56:00'),
-    ('DH0209', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-05-23T16:03:00'),
-    ('DH0210', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-05-23T17:10:00');
+    ('DH0001', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-03T08:07:00'),
+    ('DH0002', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-05T09:14:00'),
+    ('DH0003', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-07T10:21:00'),
+    ('DH0004', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-03-09T11:28:00'),
+    ('DH0005', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-11T12:35:00'),
+    ('DH0006', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-13T13:42:00'),
+    ('DH0007', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-03-15T14:49:00'),
+    ('DH0008', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-17T15:56:00'),
+    ('DH0009', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-03-19T16:03:00'),
+    ('DH0010', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-21T17:10:00');
 GO
-
 INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
     ('DH0011', 'CN00000011', 'NV00000011', 'KH0011', 244000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-23T18:17:00'),
     ('DH0012', 'CN00000012', 'NV00000012', NULL, 67000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-25T19:24:00'),
@@ -3059,7 +3138,6 @@ INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, Phuong
     ('DH0049', 'CN00000009', 'NV00000009', 'KH0049', 88000.00, 15000.00, 'QR', N'Hoàn tất', '2026-04-18T17:43:00'),
     ('DH0050', 'CN00000010', 'NV00000010', 'KH0050', 150000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-04-20T18:50:00');
 GO
-
 -- Enable lại trigger sau khi INSERT xong
 ENABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
 GO

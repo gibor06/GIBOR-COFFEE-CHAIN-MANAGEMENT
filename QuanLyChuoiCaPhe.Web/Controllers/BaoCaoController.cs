@@ -28,34 +28,57 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 
                 ViewBag.DoanhThuTheoChiNhanh = await _baoCaoService.GetDoanhThuTheoChiNhanhAsync(chiNhanhFilter);
                 ViewBag.TopSanPham = await _baoCaoService.GetTopSanPhamBanChayAsync(10, chiNhanhFilter);
-                ViewBag.TopKhachHang = await _baoCaoService.GetTopKhachHangAsync();
-
-                // Doanh thu theo ngày (7 ngày gần nhất)
-                var doanhThuQuery = _context.DonHangs
-                    .Where(d => d.NgayTao >= DateTime.Now.AddDays(-7))
-                    .AsQueryable();
-                
-                // Filter theo chi nhánh
-                if (chiNhanhFilter != null)
+                int? topKhachHangChiNhanh = null;
+                var userRole = HttpContext.Session.GetString("UserRole") ?? CurrentVaiTro;
+                if (userRole == "QUAN_LY")
                 {
-                    doanhThuQuery = doanhThuQuery.Where(d => d.MaChiNhanh == chiNhanhFilter);
+                    var maCNStr = HttpContext.Session.GetString("MaChiNhanh") ?? CurrentMaChiNhanh;
+                    if (!string.IsNullOrEmpty(maCNStr))
+                    {
+                        if (int.TryParse(maCNStr.Replace("CN", ""), out int parsed))
+                        {
+                            topKhachHangChiNhanh = parsed;
+                        }
+                    }
                 }
-                
-                var doanhThuTheoNgay = await doanhThuQuery
+                ViewBag.TopKhachHang = await _baoCaoService.GetTopKhachHangAsync(topKhachHangChiNhanh, 10);
+
+                // Doanh thu theo ngày (7 ngày gần nhất, không khuyết ngày)
+                var dates = Enumerable.Range(0, 7)
+                    .Select(offset => DateTime.Today.AddDays(-6 + offset))
+                    .ToList();
+
+                var startQueryDate = DateTime.Today.AddDays(-6);
+                var doanhThuDb = await _context.DonHangs
+                    .Where(d => d.NgayTao >= startQueryDate)
+                    .Where(d => chiNhanhFilter == null || d.MaChiNhanh == chiNhanhFilter)
                     .GroupBy(d => d.NgayTao.Date)
                     .Select(g => new
                     {
                         Ngay = g.Key,
                         DoanhThu = g.Sum(d => d.TongTien - d.GiamGia)
                     })
-                    .OrderBy(x => x.Ngay)
-                    .ToListAsync();
+                    .ToDictionaryAsync(x => x.Ngay, x => x.DoanhThu);
+
+                var doanhThuTheoNgay = dates.Select(date => new
+                {
+                    Ngay = date,
+                    DoanhThu = doanhThuDb.ContainsKey(date) ? doanhThuDb[date] : 0m
+                }).ToList();
 
                 ViewBag.DoanhThuTheoNgay = doanhThuTheoNgay;
 
-                // Nhật ký hệ thống
-                var nhatKy = await _context.DuLieuHeThongs
+                // Nhật ký hệ thống (Ẩn HeThongTaiKhoan đối với các vai trò không phải ADMIN)
+                var nhatKyQuery = _context.DuLieuHeThongs
                     .Include(d => d.HeThongTaiKhoan)
+                    .AsQueryable();
+
+                if (CurrentVaiTro != "ADMIN")
+                {
+                    nhatKyQuery = nhatKyQuery.Where(d => d.TenBang != "HeThongTaiKhoan");
+                }
+
+                var nhatKy = await nhatKyQuery
                     .OrderByDescending(d => d.ThoiGian)
                     .Take(50)
                     .ToListAsync();

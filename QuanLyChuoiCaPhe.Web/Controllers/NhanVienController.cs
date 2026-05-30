@@ -92,18 +92,23 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ThongTinNhanVien model)
         {
+            // Chuẩn hóa dữ liệu Số CCCD rỗng về null
+            model.SoCCCD = string.IsNullOrWhiteSpace(model.SoCCCD) ? null : model.SoCCCD.Trim();
+
             // Kiểm tra quyền truy cập chi nhánh
             var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
             if (accessCheck != null) return accessCheck;
 
-            // Xóa validation errors cho navigation properties
+            // Xóa validation errors cho navigation properties và MaNV sinh tự động
+            ModelState.Remove("MaNV");
+            ModelState.Remove("model.MaNV");
             ModelState.Remove("ChucVuNhanVien");
             ModelState.Remove("ChiNhanh");
             ModelState.Remove("DonHangs");
             ModelState.Remove("BangLuongs");
-            
-            // TẠM THỜI BỎ QUA VALIDATION ĐỂ TEST
-            ModelState.Clear();
+            ModelState.Remove("TaiKhoanNhanViens");
+            ModelState.Remove("MaChiNhanhNavigation");
+            ModelState.Remove("MaChucVuNavigation");
             
             // Validate thủ công các trường bắt buộc
             if (string.IsNullOrEmpty(model.HoTenNV))
@@ -114,10 +119,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             {
                 ModelState.AddModelError("SoDienThoai", "Số điện thoại là bắt buộc");
             }
-            if (string.IsNullOrEmpty(model.SoCanCuoc))
-            {
-                ModelState.AddModelError("SoCanCuoc", "Số căn cước là bắt buộc");
-            }
+
             if (string.IsNullOrEmpty(model.MaChiNhanh))
             {
                 ModelState.AddModelError("MaChiNhanh", "Chi nhánh là bắt buộc");
@@ -199,6 +201,9 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ThongTinNhanVien model)
         {
+            // Chuẩn hóa dữ liệu Số CCCD rỗng về null
+            model.SoCCCD = string.IsNullOrWhiteSpace(model.SoCCCD) ? null : model.SoCCCD.Trim();
+
             // Kiểm tra quyền truy cập chi nhánh
             var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
             if (accessCheck != null) return accessCheck;
@@ -208,6 +213,9 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ModelState.Remove("ChiNhanh");
             ModelState.Remove("DonHangs");
             ModelState.Remove("BangLuongs");
+            ModelState.Remove("TaiKhoanNhanViens");
+            ModelState.Remove("MaChiNhanhNavigation");
+            ModelState.Remove("MaChucVuNavigation");
             
             if (!ModelState.IsValid)
             {

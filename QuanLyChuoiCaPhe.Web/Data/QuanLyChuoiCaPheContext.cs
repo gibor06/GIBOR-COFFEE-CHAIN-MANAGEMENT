@@ -42,6 +42,7 @@ namespace QuanLyChuoiCaPhe.Web.Data
         public virtual DbSet<VwMenuChiNhanh> VwMenuChiNhanhs { get; set; }
         public virtual DbSet<VwCanhBaoTonKho> VwCanhBaoTonKhos { get; set; }
         public virtual DbSet<VwBangLuongTongHop> VwBangLuongTongHops { get; set; }
+        public virtual DbSet<HanhTrinhDonHang> HanhTrinhDonHangs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

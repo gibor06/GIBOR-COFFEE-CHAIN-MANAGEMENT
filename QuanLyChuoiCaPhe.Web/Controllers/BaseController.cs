@@ -27,8 +27,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         /// </summary>
         protected bool CanAccessChiNhanh(string? maChiNhanh)
         {
-            // ADMIN có thể truy cập tất cả
-            if (IsAdmin) return true;
+            // ADMIN và KE_TOAN có thể truy cập tất cả
+            if (IsAdmin || CurrentVaiTro == "KE_TOAN") return true;
 
             // QUAN_LY và NHAN_VIEN chỉ truy cập chi nhánh của mình
             if (string.IsNullOrEmpty(maChiNhanh)) return false;
@@ -37,12 +37,12 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         /// <summary>
         /// Lấy mã chi nhánh để filter dữ liệu
-        /// - ADMIN: null (xem tất cả)
+        /// - ADMIN/KE_TOAN: null (xem tất cả)
         /// - QUAN_LY/NHAN_VIEN: mã chi nhánh của họ
         /// </summary>
         protected string? GetChiNhanhFilter()
         {
-            return IsAdmin ? null : CurrentMaChiNhanh;
+            return (IsAdmin || CurrentVaiTro == "KE_TOAN") ? null : CurrentMaChiNhanh;
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             if (!CanAccessChiNhanh(maChiNhanh))
             {
                 TempData["Error"] = "Bạn không có quyền truy cập dữ liệu của chi nhánh này!";
-                return Forbid();
+                return RedirectToAction("Index", "Dashboard");
             }
             return null;
         }

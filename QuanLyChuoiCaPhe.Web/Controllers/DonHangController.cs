@@ -5,6 +5,7 @@ using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Services;
 using QuanLyChuoiCaPhe.Web.ViewModels;
+using QuanLyChuoiCaPhe.Web.Models;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
@@ -21,7 +22,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             _donHangService = donHangService;
         }
 
-        public async Task<IActionResult> Index(string? search, DateTime? tuNgay, DateTime? denNgay, string? chiNhanh)
+        public async Task<IActionResult> Index(string? search, DateTime? tuNgay, DateTime? denNgay, string? chiNhanh, string? trangThai)
         {
             if (tuNgay.HasValue && denNgay.HasValue && tuNgay.Value.Date > denNgay.Value.Date)
             {
@@ -39,6 +40,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 ViewBag.TuNgay = tuNgay?.ToString("yyyy-MM-dd");
                 ViewBag.DenNgay = denNgay?.ToString("yyyy-MM-dd");
                 ViewBag.ChiNhanh = chiNhanh;
+                ViewBag.TrangThai = trangThai;
                 return View(new List<Models.DonHang>());
             }
 
@@ -76,6 +78,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 query = query.Where(d => d.MaChiNhanh == chiNhanh);
             }
 
+            if (!string.IsNullOrEmpty(trangThai))
+            {
+                query = query.Where(d => d.TrangThai == trangThai);
+            }
+
             // Lọc danh sách chi nhánh theo quyền
             var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
             if (chiNhanhFilter != null)
@@ -88,6 +95,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ViewBag.TuNgay = tuNgay?.ToString("yyyy-MM-dd");
             ViewBag.DenNgay = denNgay?.ToString("yyyy-MM-dd");
             ViewBag.ChiNhanh = chiNhanh;
+            ViewBag.TrangThai = trangThai;
 
             return View(await query.OrderByDescending(d => d.NgayTao).ToListAsync());
         }
@@ -192,7 +200,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                var maDH = await _donHangService.TaoDonHangAsync(model);
+                var currentUsername = _authService.GetCurrentTenDangNhap() ?? "Hệ thống";
+                var maDH = await _donHangService.TaoDonHangAsync(model, currentUsername);
                 TempData["Success"] = $"Tạo đơn hàng {maDH} thành công!";
                 return RedirectToAction(nameof(Index));
             }
@@ -230,6 +239,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 .Include(d => d.ChiNhanh)
                 .Include(d => d.ThongTinNhanVien)
                 .Include(d => d.KhachHang)
+                .Include(d => d.HanhTrinhDonHangs)
                 .Include(d => d.ChiTietDonHangs)
                     .ThenInclude(ct => ct.BienTheSanPham)
                         .ThenInclude(bt => bt.SanPham)
@@ -265,6 +275,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
         public async Task<IActionResult> CapNhatTrangThai(string id, string trangThai)
         {
             try
@@ -294,7 +305,19 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     return Json(new { success = false, message = $"Không thể cập nhật đơn hàng đã {donHang.TrangThai.ToLower()}!" });
                 }
 
+                var oldStatus = donHang.TrangThai;
                 donHang.TrangThai = trangThai;
+
+                // Ghi nhật ký hành trình đơn hàng
+                var currentUsername = _authService.GetCurrentTenDangNhap() ?? "Hệ thống";
+                _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+                {
+                    MaDH = id,
+                    HanhDong = $"Cập nhật trạng thái từ '{oldStatus}' thành '{trangThai}'",
+                    NguoiThucHien = currentUsername,
+                    ThoiGian = DateTime.Now
+                });
+
                 await _context.SaveChangesAsync();
 
                 return Json(new { success = true, message = $"Cập nhật trạng thái thành '{trangThai}' thành công!" });
@@ -306,6 +329,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
         public async Task<IActionResult> HuyDonHang(string id)
         {
             try
@@ -333,7 +357,19 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     return Json(new { success = false, message = "Đơn hàng đã được hủy trước đó!" });
                 }
 
+                var oldStatus = donHang.TrangThai;
                 donHang.TrangThai = "Hủy";
+
+                // Ghi nhật ký hành trình đơn hàng
+                var currentUsername = _authService.GetCurrentTenDangNhap() ?? "Hệ thống";
+                _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+                {
+                    MaDH = id,
+                    HanhDong = $"Hủy đơn hàng (Trạng thái trước đó: '{oldStatus}')",
+                    NguoiThucHien = currentUsername,
+                    ThoiGian = DateTime.Now
+                });
+
                 await _context.SaveChangesAsync();
 
                 return Json(new { success = true, message = "Hủy đơn hàng thành công!" });

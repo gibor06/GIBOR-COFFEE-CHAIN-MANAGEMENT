@@ -68,9 +68,9 @@
                         <span asp-validation-for="SoDienThoai" class="text-danger"></span>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label asp-for="SoCanCuoc" class="form-label">Số Căn Cước</label>
-                        <input asp-for="SoCanCuoc" class="form-control" maxlength="12" />
-                        <span asp-validation-for="SoCanCuoc" class="text-danger"></span>
+                        <label asp-for="SoCCCD" class="form-label">Số Căn cước công dân (CCCD)</label>
+                        <input asp-for="SoCCCD" class="form-control" maxlength="12" pattern="\d{12}" placeholder="Nhập đúng 12 chữ số căn cước" />
+                        <span asp-validation-for="SoCCCD" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="row">

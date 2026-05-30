@@ -8,6 +8,7 @@ namespace QuanLyChuoiCaPhe.Web.Models
         public string? TenChiNhanh { get; set; }
         public string? MaNguyenLieu { get; set; }
         public string? TenNguyenLieu { get; set; }
+        public string? DonViTinh { get; set; }
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal? SoLuongTon { get; set; }

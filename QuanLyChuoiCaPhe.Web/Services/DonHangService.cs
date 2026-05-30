@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.ViewModels;
+using QuanLyChuoiCaPhe.Web.Models;
 using System.Data;
 
 namespace QuanLyChuoiCaPhe.Web.Services
@@ -15,7 +16,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
             _context = context;
         }
 
-        public async Task<string> TaoDonHangAsync(DonHangCreateViewModel model)
+        public async Task<string> TaoDonHangAsync(DonHangCreateViewModel model, string nguoiThucHien)
         {
             var maDH = GenerateMaDonHang();
 
@@ -35,6 +36,27 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 "EXEC sp_TaoDonHang @MaDH, @MaChiNhanh, @MaNV, @MaKH, @PhuongThucThanhToan, @GiamGia",
                 parameters);
 
+            // Ghi nhật ký hành trình: Khởi tạo đơn hàng
+            _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+            {
+                MaDH = maDH,
+                HanhDong = "Khởi tạo đơn hàng mới",
+                NguoiThucHien = nguoiThucHien,
+                ThoiGian = DateTime.Now
+            });
+
+            // Ghi nhật ký hành trình: Áp dụng voucher/giảm giá nếu có
+            if (model.GiamGia > 0)
+            {
+                _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+                {
+                    MaDH = maDH,
+                    HanhDong = $"Áp dụng giảm giá: {model.GiamGia.ToString("N0")} đ",
+                    NguoiThucHien = nguoiThucHien,
+                    ThoiGian = DateTime.Now
+                });
+            }
+
             // Thêm chi tiết đơn hàng
             foreach (var item in model.ChiTietDonHangs)
             {
@@ -53,7 +75,30 @@ namespace QuanLyChuoiCaPhe.Web.Services
                     @"INSERT INTO ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia) 
                       VALUES (@MaCTDH, @MaDH, @MaBienThe, @SoLuong, @DonGia)",
                     detailParams);
+
+                // Lấy thông tin sản phẩm để ghi log chi tiết
+                var bienThe = await _context.BienTheSanPhams
+                    .Include(b => b.SanPham)
+                    .FirstOrDefaultAsync(b => b.MaBienThe == item.MaBienThe);
+                var detailName = bienThe != null ? $"{bienThe.SanPham.TenSanPham} (Size {bienThe.Size})" : item.MaBienThe;
+
+                _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+                {
+                    MaDH = maDH,
+                    HanhDong = $"Thêm món: {detailName}, Số lượng: {item.SoLuong}, Đơn giá: {item.DonGia.ToString("N0")} đ",
+                    NguoiThucHien = nguoiThucHien,
+                    ThoiGian = DateTime.Now
+                });
             }
+
+            // Cập nhật trạng thái đơn hàng thành 'Hoàn tất' sau khi chèn xong tất cả các chi tiết từ C#
+            var donHang = await _context.DonHangs.FindAsync(maDH);
+            if (donHang != null)
+            {
+                donHang.TrangThai = "Hoàn tất";
+            }
+
+            await _context.SaveChangesAsync();
 
             return maDH;
         }

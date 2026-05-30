@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.ViewModels;
 
@@ -28,10 +28,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 DoanhThuHomNay = await _context.DonHangs
                     .Where(d => d.NgayTao.Date == today)
                     .SumAsync(d => (decimal?)d.TongTien - d.GiamGia) ?? 0,
-                SoCanhBaoTonKho = await _context.VwCanhBaoTonKhos.CountAsync(x =>
-                    x.SoLuongTon.HasValue &&
-                    x.MucCanhBao.HasValue &&
-                    x.SoLuongTon.Value <= x.MucCanhBao.Value),
+                SoCanhBaoTonKho = await _context.VwCanhBaoTonKhos.CountAsync(),
                 BangLuongTamTinh = await _context.BangLuongs
                     .Where(b => b.TrangThai == "Tạm tính")
                     .SumAsync(b => (decimal?)b.ThucLanh) ?? 0

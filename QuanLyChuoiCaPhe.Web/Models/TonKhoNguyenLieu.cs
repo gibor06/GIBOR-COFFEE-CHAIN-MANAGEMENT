@@ -17,6 +17,12 @@ namespace QuanLyChuoiCaPhe.Web.Models
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal MucCanhBao { get; set; }
+
+        [Column(TypeName = "date")]
+        public DateTime? HanSuDung { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal SoLuongDaDat { get; set; }
         
         [ForeignKey("MaChiNhanh")]
         public virtual ChiNhanh? ChiNhanh { get; set; }

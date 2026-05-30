@@ -106,7 +106,7 @@
                                     </a>
                                     @if (item.TrangThai)
                                     {
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="nghiViec('@item.MaNV')">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="nghiViec('@item.MaNV')" title="Cho nghỉ việc">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
                                     }
@@ -123,7 +123,7 @@
 @section Scripts {
     <script>
         function nghiViec(id) {
-            if (confirm('Bạn có chắc muốn cho nhân viên này nghỉ việc?')) {
+            if (confirm('Bạn có chắc chắn muốn cho nhân viên này nghỉ việc không? Thao tác này sẽ chuyển trạng thái nhân viên thành Nghỉ việc.')) {
                 fetch('/NhanVien/NghiViec?id=' + id, { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {

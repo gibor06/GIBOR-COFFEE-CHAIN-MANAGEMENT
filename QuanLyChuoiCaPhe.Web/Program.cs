@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using QuanLyChuoiCaPhe.Web;
 using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.Services;
@@ -7,6 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";         // Đường dẫn trang đăng nhập mặc định
+        options.AccessDeniedPath = "/Home/AccessDenied"; // ĐƯỜNG DẪN FIX LỖI: Điểm điều hướng khi tài khoản bị chặn quyền
+    });
 
 // Add DbContext
 builder.Services.AddDbContext<QuanLyChuoiCaPheContext>(options =>
@@ -47,6 +55,7 @@ app.UseRouting();
 
 app.UseSession();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

@@ -1,17 +1,15 @@
-﻿@model IEnumerable<DonHang>
+@model IEnumerable<DonHang>
 @{
     ViewData["Title"] = "Quản lý Đơn hàng";
     var currentRole = Context.Session.GetString("VaiTro");
-    var canCreateOrder = User.IsInRole("ADMIN")
-        || User.IsInRole("NHAN_VIEN")
-        || string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase)
+    var canCreateOrder = string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase)
         || string.Equals(currentRole, "NHAN_VIEN", StringComparison.OrdinalIgnoreCase);
 }
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="bi bi-receipt"></i> Quản lý Đơn hàng</h2>
-        @if (canCreateOrder)
+        @if (!User.IsInRole("KE_TOAN"))
         {
             <a asp-action="Create" class="btn btn-coffee">
                 <i class="bi bi-plus-circle"></i> Tạo đơn hàng
@@ -26,23 +24,41 @@
 
     <div class="card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
+            <form method="get" class="row g-3" id="orderFilterForm">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Mã đơn hàng</label>
                     <input type="text" name="search" class="form-control" placeholder="Mã đơn hàng..." value="@ViewBag.Search" />
                 </div>
-                <div class="col-md-3">
-                    <input type="date" name="tuNgay" class="form-control" value="@ViewBag.TuNgay" />
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Trạng thái</label>
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Tất cả --</option>
+                        <option value="Khởi tạo" selected="@(ViewBag.TrangThai == "Khởi tạo")">Khởi tạo</option>
+                        <option value="Hoàn tất" selected="@(ViewBag.TrangThai == "Hoàn tất")">Hoàn tất</option>
+                        <option value="Hủy" selected="@(ViewBag.TrangThai == "Hủy")">Hủy</option>
+                    </select>
                 </div>
-                <div class="col-md-3">
-                    <input type="date" name="denNgay" class="form-control" value="@ViewBag.DenNgay" />
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Từ ngày</label>
+                    <input type="date" name="tuNgay" id="tuNgay" class="form-control" placeholder="dd/mm/yyyy" value="@ViewBag.TuNgay" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Đến ngày</label>
+                    <input type="date" name="denNgay" id="denNgay" class="form-control" placeholder="dd/mm/yyyy" value="@ViewBag.DenNgay" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i> Tìm kiếm
                     </button>
-                    <a asp-action="Index" class="btn btn-secondary">
+                    <a asp-action="Index" class="btn btn-secondary" title="Làm mới">
                         <i class="bi bi-arrow-clockwise"></i>
                     </a>
+                    @if (string.Equals(currentRole, "KE_TOAN", StringComparison.OrdinalIgnoreCase) || string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <button type="button" onclick="exportTableToExcel('donHangTable', 'danh-sach-don-hang')" class="btn btn-success" title="Xuất file Excel">
+                            <i class="bi bi-file-earmark-excel"></i> Xuất Excel
+                        </button>
+                    }
                 </div>
             </form>
         </div>
@@ -50,8 +66,10 @@
 
     <div class="card">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
+            @if (Model != null && Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover" id="donHangTable">
                     <thead>
                         <tr>
                             <th>Mã ĐH</th>
@@ -104,7 +122,7 @@
                                             <i class="bi bi-eye"></i>
                                         </a>
 
-                                        @if (item.TrangThai != "Hoàn tất" && item.TrangThai != "Hủy")
+                                        @if (!User.IsInRole("KE_TOAN") && item.TrangThai != "Hoàn tất" && item.TrangThai != "Hủy")
                                         {
                                             <div class="btn-group" role="group">
                                                 <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Cập nhật trạng thái">
@@ -114,7 +132,7 @@
                                                     <li><a class="dropdown-item" href="javascript:void(0)" onclick="capNhatTrangThai('@item.MaDH', 'Hoàn tất')">Hoàn tất</a></li>
                                                 </ul>
                                             </div>
-
+ 
                                             <button type="button" class="btn btn-sm btn-danger" onclick="huyDonHang('@item.MaDH')" title="Hủy đơn">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
@@ -124,8 +142,15 @@
                             </tr>
                         }
                     </tbody>
-                </table>
-            </div>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center m-0">
+                    <i class="bi bi-info-circle"></i> Không tìm thấy đơn hàng phù hợp.
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -182,4 +207,20 @@ function huyDonHang(maDH) {
         alert('Lỗi: ' + error);
     });
 }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('orderFilterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            const tuNgayVal = document.getElementById('tuNgay').value;
+            const denNgayVal = document.getElementById('denNgay').value;
+            if (tuNgayVal && denNgayVal && new Date(tuNgayVal) > new Date(denNgayVal)) {
+                e.preventDefault();
+                alert('Lỗi: Khoảng thời gian không hợp lệ: "Từ ngày" phải nhỏ hơn hoặc bằng "Đến ngày"!');
+            }
+        });
+    }
+});
 </script>

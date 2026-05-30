@@ -1,6 +1,15 @@
 @using QuanLyChuoiCaPhe.Web.Services
+@using Microsoft.AspNetCore.Http
 @{
     ViewData["Title"] = "Báo cáo";
+}
+@functions {
+    public string FormatPhoneNumber(string phone, string? role) {
+        if (role != "ADMIN" && !string.IsNullOrEmpty(phone) && phone.Length >= 10) {
+            return System.Text.RegularExpressions.Regex.Replace(phone, @"^(\d{3})\d{4}(\d{3})$", "$1****$2");
+        }
+        return phone;
+    }
 }
 
 <div class="container-fluid p-4">
@@ -112,7 +121,7 @@
                                         <tr>
                                             <td>@stt</td>
                                             <td><strong>@item.TenKH</strong></td>
-                                            <td>@item.SoDienThoai</td>
+                                            <td>@FormatPhoneNumber(item.SoDienThoai, Context.Session.GetString("UserRole"))</td>
                                             <td><span class="badge bg-warning">@item.DiemTichLuy điểm</span></td>
                                         </tr>
                                         stt++;

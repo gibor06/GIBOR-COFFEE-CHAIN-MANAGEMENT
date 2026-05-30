@@ -1,3 +1,4 @@
+@using QuanLyChuoiCaPhe.Web.Services
 @model IEnumerable<VwCanhBaoTonKho>
 @{
     ViewData["Title"] = "Cảnh báo Tồn kho";
@@ -13,19 +14,20 @@
 
     @if (Model.Any())
     {
-        <div class="alert alert-warning">
+        <div class="alert alert-danger">
             <i class="bi bi-exclamation-triangle-fill"></i>
-            <strong>Có @Model.Count() nguyên liệu cần cảnh báo!</strong>
+            <strong>Có @Model.Count() nguyên liệu cần cảnh báo dưới mức tồn tối thiểu!</strong>
         </div>
 
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th>Chi nhánh</th>
                                 <th>Nguyên liệu</th>
+                                <th>Đơn vị tính</th>
                                 <th>Số lượng tồn</th>
                                 <th>Mức cảnh báo</th>
                                 <th>Mức độ</th>
@@ -34,13 +36,15 @@
                         <tbody>
                             @foreach (var item in Model)
                             {
-                                <tr class="table-warning">
+                                var donViTinh = item.DonViTinh;
+                                <tr class="table-danger">
                                     <td>@item.TenChiNhanh</td>
                                     <td><strong>@item.TenNguyenLieu</strong></td>
-                                    <td class="text-danger">@item.SoLuongTon?.ToString("N2")</td>
-                                    <td>@item.MucCanhBao?.ToString("N2")</td>
+                                    <td>@donViTinh</td>
+                                    <td class="text-danger fw-bold">@FormatHelper.FormatByUnit(item.SoLuongTon ?? 0, donViTinh)</td>
+                                    <td>@FormatHelper.FormatByUnit(item.MucCanhBao ?? 0, donViTinh)</td>
                                     <td>
-                                        <span class="badge bg-danger">@item.MucDo</span>
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> @item.MucDo</span>
                                     </td>
                                 </tr>
                             }
@@ -54,7 +58,7 @@
     {
         <div class="alert alert-success">
             <i class="bi bi-check-circle-fill"></i>
-            <strong>Tuyệt vời!</strong> Không có nguyên liệu nào cần cảnh báo.
+            <strong>Tuyệt vời!</strong> Không có nguyên liệu nào dưới mức cảnh báo tồn kho.
         </div>
     }
 </div>

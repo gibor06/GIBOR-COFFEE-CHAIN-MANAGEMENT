@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyChuoiCaPhe.Web.Data;
+using QuanLyChuoiCaPhe.Web.Models;
 
 namespace QuanLyChuoiCaPhe.Web.Services
 {
@@ -61,21 +62,27 @@ namespace QuanLyChuoiCaPhe.Web.Services
             return result ?? new List<SanPhamBanChay>();
         }
 
-        public async Task<List<KhachHangThanThiet>> GetTopKhachHangAsync(int top = 10)
+        public async Task<List<KhachHangThanThiet>> GetTopKhachHangAsync(int? maChiNhanh, int top = 10)
         {
-            var result = await _context.KhachHangs
+            var query = _context.KhachHangs.AsQueryable();
+
+            if (maChiNhanh.HasValue)
+            {
+                // Chỉ lấy khách hàng có ít nhất một đơn hàng tại chi nhánh này
+                string maChiNhanhStr = "CN" + maChiNhanh.Value.ToString("D8");
+                query = query.Where(k => _context.DonHangs.Any(d => d.MaKH == k.MaKH && d.MaChiNhanh == maChiNhanhStr));
+            }
+
+            return await query
                 .OrderByDescending(k => k.DiemTichLuy)
                 .Take(top)
                 .Select(k => new KhachHangThanThiet
                 {
-                    MaKH = k.MaKH,
                     TenKH = k.TenKH,
                     SoDienThoai = k.SoDienThoai,
                     DiemTichLuy = k.DiemTichLuy
                 })
                 .ToListAsync();
-            
-            return result ?? new List<KhachHangThanThiet>();
         }
     }
 

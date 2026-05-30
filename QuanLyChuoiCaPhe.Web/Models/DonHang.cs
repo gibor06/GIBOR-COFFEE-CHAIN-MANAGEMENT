@@ -47,5 +47,6 @@ namespace QuanLyChuoiCaPhe.Web.Models
         public virtual KhachHang? KhachHang { get; set; }
         
         public virtual ICollection<ChiTietDonHang> ChiTietDonHangs { get; set; } = new List<ChiTietDonHang>();
+        public virtual ICollection<HanhTrinhDonHang> HanhTrinhDonHangs { get; set; } = new List<HanhTrinhDonHang>();
     }
 }
