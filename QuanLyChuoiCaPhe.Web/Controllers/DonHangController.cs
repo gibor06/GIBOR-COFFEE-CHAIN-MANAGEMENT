@@ -9,7 +9,7 @@ using QuanLyChuoiCaPhe.Web.Models;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
-    [RoleAuthorize]
+    [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
     public class DonHangController : BaseController
     {
         private readonly QuanLyChuoiCaPheContext _context;
@@ -101,100 +101,59 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
-        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
+        [RoleAuthorize("NHAN_VIEN", "QUAN_LY")]
         public async Task<IActionResult> Create()
         {
-            // Lọc danh sách chi nhánh theo quyền
             var chiNhanhFilter = GetChiNhanhFilter();
-            var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
-            if (chiNhanhFilter != null)
+            if (string.IsNullOrEmpty(chiNhanhFilter))
             {
-                chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
+                TempData["Error"] = "Tài khoản của bạn không được liên kết với chi nhánh nào!";
+                return RedirectToAction(nameof(Index));
             }
 
-            // Lọc nhân viên theo chi nhánh
-            var nhanViensQuery = _context.ThongTinNhanViens.Where(n => n.TrangThai);
-            if (chiNhanhFilter != null)
-            {
-                nhanViensQuery = nhanViensQuery.Where(n => n.MaChiNhanh == chiNhanhFilter);
-            }
+            await PrepareCreateViewBagAsync(chiNhanhFilter);
 
-            ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
-            ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
-            ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
-            ViewBag.BienThes = await _context.BienTheSanPhams
-                .Include(b => b.SanPham)
-                .Where(b => b.TrangThai && b.SanPham.TrangThai)
-                .ToListAsync();
-
-            // Tự động chọn chi nhánh nếu không phải ADMIN
-            var model = new DonHangCreateViewModel();
-            if (chiNhanhFilter != null)
+            var model = new DonHangCreateViewModel
             {
-                model.MaChiNhanh = chiNhanhFilter;
-            }
+                MaChiNhanh = chiNhanhFilter,
+                MaNV = CurrentMaNV ?? ""
+            };
 
             return View(model);
         }
 
         [HttpPost]
-        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
+        [RoleAuthorize("NHAN_VIEN", "QUAN_LY")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DonHangCreateViewModel model)
         {
+            // Bắt buộc lấy từ session để bảo mật chống giả mạo
+            model.MaNV = CurrentMaNV ?? "";
+            model.MaChiNhanh = CurrentMaChiNhanh ?? "";
+
+            ModelState.Remove(nameof(model.MaNV));
+            ModelState.Remove(nameof(model.MaChiNhanh));
+
+            if (string.IsNullOrEmpty(model.MaNV) || string.IsNullOrEmpty(model.MaChiNhanh))
+            {
+                TempData["Error"] = "Tài khoản của bạn không được liên kết với nhân viên hoặc chi nhánh nào!";
+                return RedirectToAction(nameof(Index));
+            }
+
             // Kiểm tra quyền truy cập chi nhánh
             var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
             if (accessCheck != null) return accessCheck;
 
             if (!ModelState.IsValid)
             {
-                var chiNhanhFilter = GetChiNhanhFilter();
-                var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
-                }
-
-                var nhanViensQuery = _context.ThongTinNhanViens.Where(n => n.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    nhanViensQuery = nhanViensQuery.Where(n => n.MaChiNhanh == chiNhanhFilter);
-                }
-
-                ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
-                ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
-                ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
-                ViewBag.BienThes = await _context.BienTheSanPhams
-                    .Include(b => b.SanPham)
-                    .Where(b => b.TrangThai && b.SanPham.TrangThai)
-                    .ToListAsync();
+                await PrepareCreateViewBagAsync(model.MaChiNhanh);
                 return View(model);
             }
 
             if (model.ChiTietDonHangs == null || !model.ChiTietDonHangs.Any())
             {
                 TempData["Error"] = "Vui lòng thêm ít nhất một sản phẩm!";
-                
-                var chiNhanhFilter = GetChiNhanhFilter();
-                var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
-                }
-
-                var nhanViensQuery = _context.ThongTinNhanViens.Where(n => n.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    nhanViensQuery = nhanViensQuery.Where(n => n.MaChiNhanh == chiNhanhFilter);
-                }
-
-                ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
-                ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
-                ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
-                ViewBag.BienThes = await _context.BienTheSanPhams
-                    .Include(b => b.SanPham)
-                    .Where(b => b.TrangThai && b.SanPham.TrangThai)
-                    .ToListAsync();
+                await PrepareCreateViewBagAsync(model.MaChiNhanh);
                 return View(model);
             }
 
@@ -208,27 +167,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = $"Lỗi: {ex.InnerException?.Message ?? ex.Message}";
-                
-                var chiNhanhFilter = GetChiNhanhFilter();
-                var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
-                }
-
-                var nhanViensQuery = _context.ThongTinNhanViens.Where(n => n.TrangThai);
-                if (chiNhanhFilter != null)
-                {
-                    nhanViensQuery = nhanViensQuery.Where(n => n.MaChiNhanh == chiNhanhFilter);
-                }
-
-                ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
-                ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
-                ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
-                ViewBag.BienThes = await _context.BienTheSanPhams
-                    .Include(b => b.SanPham)
-                    .Where(b => b.TrangThai && b.SanPham.TrangThai)
-                    .ToListAsync();
+                await PrepareCreateViewBagAsync(model.MaChiNhanh);
                 return View(model);
             }
         }
@@ -267,15 +206,52 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             if (bienThe == null)
             {
-                return Json(new { success = false });
+                return Json(new { success = false, message = "Không tìm thấy biến thể!" });
             }
 
-            var price = bienThe.SanPham.GiaCoBan + bienThe.GiaCongThem;
+            var chiNhanh = CurrentMaChiNhanh;
+            decimal basePrice = bienThe.SanPham.GiaCoBan;
+
+            if (!string.IsNullOrEmpty(chiNhanh))
+            {
+                var spcn = await _context.SanPhamChiNhanhs
+                    .FirstOrDefaultAsync(s => s.MaChiNhanh == chiNhanh && s.MaSanPham == bienThe.MaSanPham);
+                if (spcn != null)
+                {
+                    basePrice = spcn.GiaBan;
+                }
+            }
+
+            var price = basePrice + bienThe.GiaCongThem;
             return Json(new { success = true, price = price, tenSanPham = bienThe.SanPham.TenSanPham, size = bienThe.Size });
         }
 
+        private async Task PrepareCreateViewBagAsync(string chiNhanhFilter)
+        {
+            var nhanVien = await _context.ThongTinNhanViens
+                .Include(n => n.ChiNhanh)
+                .FirstOrDefaultAsync(n => n.MaNV == CurrentMaNV);
+            
+            ViewBag.CurrentTenNhanVien = nhanVien?.HoTenNV ?? "N/A";
+            ViewBag.CurrentTenChiNhanh = nhanVien?.ChiNhanh?.TenChiNhanh ?? "N/A";
+
+            var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai && c.MaChiNhanh == chiNhanhFilter);
+            var nhanViensQuery = _context.ThongTinNhanViens.Where(n => n.TrangThai && n.MaNV == (CurrentMaNV ?? ""));
+
+            ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
+            ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
+            ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
+            
+            // Chỉ lấy biến thể thuộc menu/sản phẩm của chi nhánh hiện tại
+            ViewBag.BienThes = await _context.BienTheSanPhams
+                .Include(b => b.SanPham)
+                .Where(b => b.TrangThai && b.SanPham.TrangThai)
+                .Where(b => _context.SanPhamChiNhanhs.Any(spcn => spcn.MaChiNhanh == chiNhanhFilter && spcn.MaSanPham == b.MaSanPham && spcn.TrangThai))
+                .ToListAsync();
+        }
+
         [HttpPost]
-        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
         public async Task<IActionResult> CapNhatTrangThai(string id, string trangThai)
         {
             try
@@ -329,7 +305,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
-        [RoleAuthorize("ADMIN", "NHAN_VIEN")]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
         public async Task<IActionResult> HuyDonHang(string id)
         {
             try

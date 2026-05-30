@@ -207,6 +207,23 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             // Kiểm tra quyền truy cập chi nhánh
             var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
             if (accessCheck != null) return accessCheck;
+
+            // Ngăn chặn tự khóa hoặc tự cho nghỉ việc chính mình
+            if (model.MaNV == CurrentMaNV)
+            {
+                var currentDbRecord = await _context.ThongTinNhanViens.AsNoTracking().FirstOrDefaultAsync(n => n.MaNV == model.MaNV);
+                if (currentDbRecord != null)
+                {
+                    if (model.TrangThai == false && currentDbRecord.TrangThai == true)
+                    {
+                        ModelState.AddModelError("TrangThai", "Bạn không thể tự vô hiệu hóa tài khoản của chính mình!");
+                    }
+                    if (model.NgayNghiViec != null && currentDbRecord.NgayNghiViec == null)
+                    {
+                        ModelState.AddModelError("NgayNghiViec", "Bạn không thể tự cho chính mình nghỉ việc!");
+                    }
+                }
+            }
             
             // Xóa validation errors cho navigation properties
             ModelState.Remove("ChucVuNhanVien");
@@ -261,6 +278,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         {
             try
             {
+                if (id == CurrentMaNV)
+                {
+                    return Json(new { success = false, message = "Bạn không thể tự cho chính mình nghỉ việc!" });
+                }
+
                 var nhanVien = await _context.ThongTinNhanViens.FindAsync(id);
                 if (nhanVien == null)
                 {

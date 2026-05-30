@@ -8,7 +8,7 @@ using QuanLyChuoiCaPhe.Web.Services;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
-    [RoleAuthorize("ADMIN", "QUAN_LY")]
+    [RoleAuthorize("ADMIN")]
     public class ChiNhanhController : BaseController
     {
         private readonly QuanLyChuoiCaPheContext _context;

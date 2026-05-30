@@ -76,10 +76,9 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
-        [RoleAuthorize("ADMIN", "KHO")]
+        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
         public async Task<IActionResult> GiaoDich()
         {
-            // Lá» c danh sÃ¡ch chi nhÃ¡nh theo quyá» n
             var chiNhanhFilter = GetChiNhanhFilter();
             var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
             if (chiNhanhFilter != null)
@@ -93,7 +92,6 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ViewBag.NguyenLieuRawList = nguyenLieus;
             
             var model = new KhoGiaoDichViewModel();
-            // Tá»± Ä‘á»™ng chá» n chi nhÃ¡nh náº¿u khÃ´ng pháº£i ADMIN
             if (chiNhanhFilter != null)
             {
                 model.MaChiNhanh = chiNhanhFilter;
@@ -108,10 +106,12 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         public async Task<IActionResult> GiaoDich(KhoGiaoDichViewModel model)
         {
             var userRole = HttpContext.Session.GetString("UserRole") ?? CurrentVaiTro;
-            if (userRole == "QUAN_LY")
+            if (userRole != "ADMIN")
             {
-                return Json(new { success = false, message = "Lỗi bảo mật: Vai trò Quản lý chi nhánh chỉ có quyền giám sát, không có quyền tạo hoặc chỉnh sửa dữ liệu kho vật lý!" });
+                model.MaChiNhanh = CurrentMaChiNhanh ?? "";
             }
+
+            ModelState.Remove(nameof(model.MaChiNhanh));
 
             // Kiểm tra quyền truy cập chi nhánh
             var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
@@ -172,23 +172,27 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             try
             {
                 await _khoService.CanhBaoTonKhoAsync();
-                var query = _context.VwCanhBaoTonKhos
-                    .AsNoTracking()
-                    .AsQueryable();
                 
-                var userRole = HttpContext.Session.GetString("UserRole") ?? CurrentVaiTro;
-                if (userRole == "QUAN_LY")
+                // Join VwCanhBaoTonKhos với NguyenLieus để lấy DonViTinh và lọc chỉ lấy SoLuongTon <= MucCanhBao
+                var query = from c in _context.VwCanhBaoTonKhos
+                            join n in _context.NguyenLieus on c.MaNguyenLieu equals n.MaNguyenLieu
+                            where c.SoLuongTon <= c.MucCanhBao
+                            select new VwCanhBaoTonKho
+                            {
+                                MaChiNhanh = c.MaChiNhanh,
+                                TenChiNhanh = c.TenChiNhanh,
+                                MaNguyenLieu = c.MaNguyenLieu,
+                                TenNguyenLieu = c.TenNguyenLieu,
+                                SoLuongTon = c.SoLuongTon,
+                                MucCanhBao = c.MucCanhBao,
+                                MucDo = c.MucDo,
+                                DonViTinh = n.DonViTinh
+                            };
+                
+                var chiNhanhFilter = GetChiNhanhFilter();
+                if (chiNhanhFilter != null)
                 {
-                    var maChiNhanhSession = HttpContext.Session.GetString("MaChiNhanh") ?? CurrentMaChiNhanh;
-                    query = query.Where(c => c.MaChiNhanh == maChiNhanhSession);
-                }
-                else
-                {
-                    var chiNhanhFilter = GetChiNhanhFilter();
-                    if (chiNhanhFilter != null)
-                    {
-                        query = query.Where(c => c.MaChiNhanh == chiNhanhFilter);
-                    }
+                    query = query.Where(c => c.MaChiNhanh == chiNhanhFilter);
                 }
                 
                 var canhBao = await query
@@ -314,6 +318,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             if (userRole == "QUAN_LY")
             {
                 return Json(new { success = false, message = "Lỗi bảo mật: Vai trò Quản lý chi nhánh chỉ có quyền giám sát, không có quyền tạo hoặc chỉnh sửa dữ liệu kho vật lý!" });
+            }
+
+            if (userRole != "ADMIN")
+            {
+                maChiNhanh = CurrentMaChiNhanh ?? "";
             }
 
             var accessCheck = CheckChiNhanhAccess(maChiNhanh);

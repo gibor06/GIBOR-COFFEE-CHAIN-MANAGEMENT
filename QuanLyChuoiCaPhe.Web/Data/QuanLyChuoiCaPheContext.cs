@@ -65,6 +65,47 @@ namespace QuanLyChuoiCaPhe.Web.Data
             modelBuilder.Entity<CongThucPhaChe>()
                 .HasKey(c => new { c.MaCongThuc, c.MaNguyenLieu });
 
+            // Disable OUTPUT clause for tables with triggers
+            // This fixes: "The target table of the DML statement cannot have any enabled triggers 
+            // if the statement contains an OUTPUT clause without INTO clause"
+            
+            // HeThongTaiKhoan
+            modelBuilder.Entity<HeThongTaiKhoan>()
+                .ToTable(tb => tb.HasTrigger("TR_HeThongTaiKhoan_NhatKy"));
+            
+            // ChiNhanh
+            modelBuilder.Entity<ChiNhanh>()
+                .ToTable(tb => tb.HasTrigger("TRG_ChiNhanh_NhatKy"));
+            
+            // ThongTinNhanVien
+            modelBuilder.Entity<ThongTinNhanVien>()
+                .ToTable(tb => tb.HasTrigger("TRG_ThongTinNhanVien_SetTrangThai"));
+            
+            // LichPhanCong
+            modelBuilder.Entity<LichPhanCong>()
+                .ToTable(tb => tb.HasTrigger("TRG_LichPhanCong_Validate"));
+            
+            // BangLuong
+            modelBuilder.Entity<BangLuong>()
+                .ToTable(tb => tb.HasTrigger("TRG_BangLuong_KhoaDuLieu"));
+            
+            // SanPham (2 triggers)
+            modelBuilder.Entity<SanPham>()
+                .ToTable(tb => tb.HasTrigger("TRG_SanPham_DongBoTrangThaiChiNhanh"))
+                .ToTable(tb => tb.HasTrigger("TRG_SanPham_TuDongDongBoChiNhanh"));
+            
+            // LichSuKho
+            modelBuilder.Entity<LichSuKho>()
+                .ToTable(tb => tb.HasTrigger("TRG_LichSuKho_CapNhatTon"));
+            
+            // ChiTietDonHang
+            modelBuilder.Entity<ChiTietDonHang>()
+                .ToTable(tb => tb.HasTrigger("TRG_ChiTietDonHang_CapNhatTongTien"));
+            
+            // DonHang
+            modelBuilder.Entity<DonHang>()
+                .ToTable(tb => tb.HasTrigger("TRG_DonHang_CapNhatDiem"));
+
             // Views configuration
             modelBuilder.Entity<VwMenuChiNhanh>(entity =>
             {

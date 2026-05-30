@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Services;
 using QuanLyChuoiCaPhe.Web.ViewModels;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
-    [RoleAuthorize]
+    [RoleAuthorize("ADMIN", "QUAN_LY")]
     public class DashboardController : BaseController
     {
         private readonly DashboardService _dashboardService;
@@ -20,7 +20,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         {
             try
             {
-                var model = await _dashboardService.GetDashboardDataAsync();
+                var chiNhanhFilter = GetChiNhanhFilter();
+                var model = await _dashboardService.GetDashboardDataAsync(chiNhanhFilter);
                 return View(model);
             }
             catch (Exception ex)

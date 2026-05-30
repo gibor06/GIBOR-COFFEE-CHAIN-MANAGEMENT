@@ -3,114 +3,289 @@
     ViewData["Title"] = "Quản lý Sản phẩm";
 }
 
+<style>
+    .product-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .product-header {
+        background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 12px 12px 0 0;
+    }
+    .product-body {
+        padding: 20px;
+    }
+    .product-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+    }
+    .product-price {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #27ae60;
+        margin: 10px 0;
+    }
+    .product-category {
+        display: inline-block;
+        padding: 5px 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+    .product-description {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        min-height: 40px;
+        margin-bottom: 15px;
+    }
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .status-active {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    .status-inactive {
+        background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+        color: white;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .btn-action {
+        flex: 1;
+        border-radius: 8px;
+        padding: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-action:hover {
+        transform: scale(1.05);
+    }
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    .page-header {
+        background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+    }
+    .page-header h2 {
+        margin: 0;
+        font-weight: 600;
+    }
+    .header-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    .btn-coffee-custom {
+        background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-coffee-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 69, 19, 0.4);
+        color: white;
+    }
+    .btn-info-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-info-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #95a5a6;
+    }
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+    }
+</style>
+
 <div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="bi bi-cup-straw"></i> Quản lý Sản phẩm</h2>
-        <div>
-            <a asp-action="Menu" class="btn btn-info">
-                <i class="bi bi-menu-button-wide"></i> Xem Menu
-            </a>
-            <a asp-action="Create" class="btn btn-coffee">
-                <i class="bi bi-plus-circle"></i> Thêm sản phẩm
-            </a>
-        </div>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Tìm kiếm..." value="@ViewBag.Search" />
-                </div>
-                <div class="col-md-3">
-                    <select name="danhMuc" class="form-select">
-                        <option value="">-- Tất cả danh mục --</option>
-                        @foreach (var dm in ViewBag.DanhMucs as List<DanhMuc>)
-                        {
-                            <option value="@dm.MaDanhMuc" selected="@(ViewBag.DanhMuc == dm.MaDanhMuc)">@dm.TenDanhMuc</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="trangThai" class="form-select">
-                        <option value="">-- Tất cả trạng thái --</option>
-                        <option value="true" selected="@(ViewBag.TrangThai == true)">Đang bán</option>
-                        <option value="false" selected="@(ViewBag.TrangThai == false)">Ngừng bán</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Tìm
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Mã SP</th>
-                            <th>Tên sản phẩm</th>
-                            <th>Danh mục</th>
-                            <th>Giá cơ bản</th>
-                            <th>Mô tả</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-                                <td>@item.MaSanPham</td>
-                                <td><strong>@item.TenSanPham</strong></td>
-                                <td><span class="badge bg-info">@item.DanhMuc.TenDanhMuc</span></td>
-                                <td>@item.GiaCoBan.ToString("N0") đ</td>
-                                <td>@item.MoTa</td>
-                                <td>
-                                    @if (item.TrangThai)
-                                    {
-                                        <span class="badge bg-success">Đang bán</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Ngừng bán</span>
-                                    }
-                                </td>
-                                <td>
-                                    <a asp-action="Edit" asp-route-id="@item.MaSanPham" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="toggleStatus('@item.MaSanPham')">
-                                        <i class="bi bi-toggle-on"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="bi bi-cup-straw"></i> Quản lý Sản phẩm</h2>
+            <div class="header-buttons">
+                <a asp-action="Menu" class="btn btn-info-custom">
+                    <i class="bi bi-menu-button-wide"></i> Xem Menu
+                </a>
+                <a asp-action="Create" class="btn btn-coffee-custom">
+                    <i class="bi bi-plus-circle"></i> Thêm sản phẩm
+                </a>
             </div>
         </div>
     </div>
+
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-search"></i> Tìm kiếm</label>
+                <input type="text" name="search" class="form-control" placeholder="Nhập tên sản phẩm..." value="@ViewBag.Search" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-tag"></i> Danh mục</label>
+                <select name="danhMuc" class="form-select">
+                    <option value="">-- Tất cả danh mục --</option>
+                    @foreach (var dm in ViewBag.DanhMucs as List<DanhMuc>)
+                    {
+                        <option value="@dm.MaDanhMuc" selected="@(ViewBag.DanhMuc == dm.MaDanhMuc)">@dm.TenDanhMuc</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-toggle-on"></i> Trạng thái</label>
+                <select name="trangThai" class="form-select">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    <option value="true" selected="@(ViewBag.TrangThai == true)">Đang bán</option>
+                    <option value="false" selected="@(ViewBag.TrangThai == false)">Ngừng bán</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Lọc
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="row">
+            @foreach (var item in Model)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="product-card">
+                        <div class="product-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="product-category">
+                                    <i class="bi bi-tag-fill"></i> @item.DanhMuc.TenDanhMuc
+                                </span>
+                                <span class="badge bg-light text-dark">@item.MaSanPham</span>
+                            </div>
+                        </div>
+                        <div class="product-body">
+                            <div class="product-title">
+                                <i class="bi bi-cup-hot-fill me-2 text-coffee"></i>
+                                @item.TenSanPham
+                            </div>
+                            <div class="product-price">
+                                <i class="bi bi-cash-coin"></i> @item.GiaCoBan.ToString("N0") đ
+                            </div>
+                            <div class="product-description">
+                                @if (!string.IsNullOrEmpty(item.MoTa))
+                                {
+                                    @item.MoTa
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Chưa có mô tả</em>
+                                }
+                            </div>
+                            <div class="text-center mb-3">
+                                @if (item.TrangThai)
+                                {
+                                    <span class="status-badge status-active">
+                                        <i class="bi bi-check-circle-fill"></i> Đang bán
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge status-inactive">
+                                        <i class="bi bi-x-circle-fill"></i> Ngừng bán
+                                    </span>
+                                }
+                            </div>
+                            <div class="action-buttons">
+                                <a asp-action="Edit" asp-route-id="@item.MaSanPham" class="btn btn-primary btn-action">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </a>
+                                <button type="button" class="btn btn-warning btn-action" onclick="toggleStatus('@item.MaSanPham')">
+                                    <i class="bi bi-arrow-repeat"></i> Đổi TT
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h4>Không tìm thấy sản phẩm nào</h4>
+                    <p>Thử thay đổi bộ lọc hoặc thêm sản phẩm mới</p>
+                    <a asp-action="Create" class="btn btn-coffee-custom mt-3">
+                        <i class="bi bi-plus-circle"></i> Thêm sản phẩm đầu tiên
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @section Scripts {
     <script>
         function toggleStatus(id) {
-            if (confirm('Bạn có chắc muốn thay đổi trạng thái?')) {
+            if (confirm('Bạn có chắc muốn thay đổi trạng thái sản phẩm này?')) {
                 fetch('/SanPham/ToggleStatus?id=' + id, { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showToast(data.message, 'success');
-                        setTimeout(() => location.reload(), 1000);
+                        alert(data.message);
+                        location.reload();
                     } else {
-                        showToast(data.message, 'error');
+                        alert('Lỗi: ' + data.message);
                     }
+                })
+                .catch(error => {
+                    alert('Có lỗi xảy ra: ' + error);
                 });
             }
         }

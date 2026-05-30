@@ -2,14 +2,14 @@
 @{
     ViewData["Title"] = "Quản lý Đơn hàng";
     var currentRole = Context.Session.GetString("VaiTro");
-    var canCreateOrder = string.Equals(currentRole, "ADMIN", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(currentRole, "NHAN_VIEN", StringComparison.OrdinalIgnoreCase);
+    var canCreateOrder = string.Equals(currentRole, "NHAN_VIEN", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentRole, "QUAN_LY", StringComparison.OrdinalIgnoreCase);
 }
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="bi bi-receipt"></i> Quản lý Đơn hàng</h2>
-        @if (!User.IsInRole("KE_TOAN"))
+        @if (canCreateOrder)
         {
             <a asp-action="Create" class="btn btn-coffee">
                 <i class="bi bi-plus-circle"></i> Tạo đơn hàng

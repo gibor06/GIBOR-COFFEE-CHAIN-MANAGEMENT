@@ -1,4 +1,4 @@
-/*
+﻿/*
     ======================================================================
                         ĐỒ ÁN QUẢN LÝ CHUỖI CỬA HÀNG CÀ PHÊ
     ======================================================================
@@ -54,7 +54,8 @@ IF OBJECT_ID(N'dbo.TRG_ThongTinNhanVien_SetTrangThai', N'TR') IS NOT NULL DROP T
 IF OBJECT_ID(N'dbo.TRG_LichPhanCong_Validate', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_LichPhanCong_Validate;
 IF OBJECT_ID(N'dbo.TRG_ChamCong_XuLy', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_ChamCong_XuLy;
 IF OBJECT_ID(N'dbo.TRG_BangLuong_KhoaDuLieu', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_BangLuong_KhoaDuLieu;
-IF OBJECT_ID(N'dbo.TRG_SanPham_CapNhatTrangThaiBienThe', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_SanPham_CapNhatTrangThaiBienThe;
+IF OBJECT_ID(N'dbo.TRG_SanPham_DongBoTrangThaiChiNhanh', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_SanPham_DongBoTrangThaiChiNhanh;
+IF OBJECT_ID(N'dbo.TRG_SanPham_TuDongDongBoChiNhanh', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh;
 IF OBJECT_ID(N'dbo.TRG_LichSuKho_CapNhatTon', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_LichSuKho_CapNhatTon;
 IF OBJECT_ID(N'dbo.TRG_ChiTietDonHang_CapNhatTongTien', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_ChiTietDonHang_CapNhatTongTien;
 IF OBJECT_ID(N'dbo.TRG_DonHang_CapNhatDiem', N'TR') IS NOT NULL DROP TRIGGER dbo.TRG_DonHang_CapNhatDiem;
@@ -602,10 +603,12 @@ CREATE TABLE dbo.TonKhoNguyenLieu
     MaNguyenLieu    CHAR(10)        NOT NULL,
     SoLuongTon      DECIMAL(18,2)   NOT NULL CONSTRAINT DF_TonKhoNguyenLieu_Ton DEFAULT 0,
     MucCanhBao      DECIMAL(18,2)   NOT NULL CONSTRAINT DF_TonKhoNguyenLieu_CanhBao DEFAULT 0,
+    HanSuDung       DATE            NULL,
+    SoLuongDaDat    DECIMAL(18,2)   NOT NULL CONSTRAINT DF_TonKhoNguyenLieu_DaDat DEFAULT 0,
     CONSTRAINT PK_TonKhoNguyenLieu PRIMARY KEY (MaChiNhanh, MaNguyenLieu),
     CONSTRAINT FK_TonKhoNguyenLieu_ChiNhanh FOREIGN KEY (MaChiNhanh) REFERENCES dbo.ChiNhanh(MaChiNhanh),
     CONSTRAINT FK_TonKhoNguyenLieu_NguyenLieu FOREIGN KEY (MaNguyenLieu) REFERENCES dbo.NguyenLieu(MaNguyenLieu),
-    CONSTRAINT CHK_TonKhoNguyenLieu_SoLuong CHECK (SoLuongTon >= 0 AND MucCanhBao >= 0)
+    CONSTRAINT CHK_TonKhoNguyenLieu_SoLuong CHECK (SoLuongTon >= 0 AND MucCanhBao >= 0 AND SoLuongDaDat >= 0)
 );
 GO
 
@@ -638,6 +641,9 @@ CREATE TABLE dbo.LichSuKho
     CONSTRAINT CHK_LichSuKho_SoLuong CHECK (SoLuong > 0)
 );
 GO
+
+-- KẾT THÚC CHỈNH SỬA BỞI TRẦN GIA BẢO
+
 /* =============================================================================================================== */
 
                                             -- CODE BỞI TRẦN DƯƠNG GIA BẢO --
@@ -1088,7 +1094,7 @@ GO
                                             -- CODE BỞI NGUYỄN NGỌC CHÂU --
 
 /* =============================================================================================================== */
-CREATE TRIGGER dbo.TRG_SanPham_CapNhatTrangThaiBienThe
+CREATE TRIGGER dbo.TRG_SanPham_DongBoTrangThaiChiNhanh
 ON dbo.SanPham
 AFTER UPDATE
 AS
@@ -1096,6 +1102,13 @@ BEGIN
     SET NOCOUNT ON;
     IF UPDATE(TrangThai)
     BEGIN
+        -- Đồng bộ trạng thái sang SanPham_ChiNhanh
+        UPDATE spcn
+        SET spcn.TrangThai = i.TrangThai
+        FROM dbo.SanPham_ChiNhanh spcn
+        JOIN inserted i ON spcn.MaSanPham = i.MaSanPham;
+        
+        -- Đồng bộ trạng thái sang BienTheSanPham
         UPDATE bt
         SET bt.TrangThai = i.TrangThai
         FROM dbo.BienTheSanPham bt
@@ -1208,14 +1221,41 @@ BEGIN
         GROUP BY MaKH
     )
     UPDATE kh
-    SET kh.DiemTichLuy = kh.DiemTichLuy + th.Delta
+    SET kh.DiemTichLuy = CASE 
+        WHEN (kh.DiemTichLuy + th.Delta) < 0 THEN 0  -- Không cho âm, set về 0
+        ELSE kh.DiemTichLuy + th.Delta 
+    END
     FROM dbo.KhachHang kh
     JOIN TongHop th ON kh.MaKH = th.MaKH;
 
-    IF EXISTS (SELECT 1 FROM dbo.KhachHang WHERE DiemTichLuy < 0)
-    BEGIN
-        THROW 50006, N'Điểm tích lũy của khách hàng không được âm.', 1;
-    END;
+    -- Không throw error nữa, chỉ đảm bảo điểm >= 0
+END;
+GO
+
+/* =============================================================================================================== */
+CREATE TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh
+ON dbo.SanPham
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Tự động thêm sản phẩm mới vào tất cả chi nhánh đang hoạt động
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            i.MaSanPham,
+            i.GiaCoBan,
+            i.TrangThai
+        FROM inserted i
+        CROSS JOIN dbo.ChiNhanh cn
+        WHERE cn.TrangThai = 1;
+    END TRY
+    BEGIN CATCH
+        -- Ghi log lỗi nhưng không rollback để không ảnh hưởng đến INSERT SanPham
+        DECLARE @ErrorMsg NVARCHAR(4000) = ERROR_MESSAGE();
+        PRINT N'Cảnh báo: Không thể tự động đồng bộ sản phẩm vào chi nhánh. Lỗi: ' + @ErrorMsg;
+    END CATCH
 END;
 GO
 
@@ -1432,6 +1472,89 @@ BEGIN
 END;
 GO
 
+/* =============================================================================================================== */
+CREATE PROCEDURE dbo.sp_DongBoSanPhamVaoChiNhanh
+    @MaSanPham CHAR(10),
+    @GiaBanMacDinh DECIMAL(18,2) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- Lấy giá cơ bản nếu không truyền vào
+        IF @GiaBanMacDinh IS NULL
+        BEGIN
+            SELECT @GiaBanMacDinh = GiaCoBan 
+            FROM dbo.SanPham 
+            WHERE MaSanPham = @MaSanPham;
+        END;
+        
+        -- Kiểm tra sản phẩm có tồn tại không
+        IF NOT EXISTS (SELECT 1 FROM dbo.SanPham WHERE MaSanPham = @MaSanPham)
+        BEGIN
+            THROW 50001, N'Sản phẩm không tồn tại!', 1;
+        END;
+        
+        -- Thêm sản phẩm vào tất cả chi nhánh đang hoạt động
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            @MaSanPham,
+            @GiaBanMacDinh,
+            1
+        FROM dbo.ChiNhanh cn
+        WHERE cn.TrangThai = 1
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM dbo.SanPham_ChiNhanh spcn 
+              WHERE spcn.MaChiNhanh = cn.MaChiNhanh 
+                AND spcn.MaSanPham = @MaSanPham
+          );
+        
+        COMMIT TRAN;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        THROW;
+    END CATCH
+END;
+GO
+
+/* =============================================================================================================== */
+CREATE PROCEDURE dbo.sp_DongBoTatCaSanPham
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- Thêm tất cả sản phẩm thiếu vào tất cả chi nhánh
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            sp.MaSanPham,
+            sp.GiaCoBan,
+            sp.TrangThai
+        FROM dbo.ChiNhanh cn
+        CROSS JOIN dbo.SanPham sp
+        WHERE cn.TrangThai = 1
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM dbo.SanPham_ChiNhanh spcn 
+              WHERE spcn.MaChiNhanh = cn.MaChiNhanh 
+                AND spcn.MaSanPham = sp.MaSanPham
+          );
+        
+        COMMIT TRAN;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        THROW;
+    END CATCH
+END;
+GO
+
 /* ========================= 12. VIEW BÁO CÁO ========================= */
 /* =============================================================================================================== */
 
@@ -1454,8 +1577,329 @@ FROM dbo.SanPham_ChiNhanh spcn
 JOIN dbo.ChiNhanh cn ON spcn.MaChiNhanh = cn.MaChiNhanh
 JOIN dbo.SanPham sp ON spcn.MaSanPham = sp.MaSanPham
 JOIN dbo.DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
-JOIN dbo.BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham;
+JOIN dbo.BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
+WHERE cn.TrangThai = 1
+  AND sp.TrangThai = 1
+  AND bt.TrangThai = 1
+  AND spcn.TrangThai = 1;
 GO
+
+
+-- =============================================
+-- BẮT ĐẦU CHỈNH SỬA BỞI TRẦN GIA BẢO
+-- =============================================
+
+USE QuanLyChuoiCaPhe;
+GO
+
+PRINT '========================================';
+PRINT 'BẮT ĐẦU SỬA LỖI ĐỒNG BỘ MENU VÀ SẢN PHẨM';
+PRINT '========================================';
+GO
+
+-- =============================================
+-- BƯỚC 1: Sửa View vw_MenuChiNhanh - Thêm lọc trạng thái
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 1: Cập nhật View vw_MenuChiNhanh...';
+
+IF OBJECT_ID('dbo.vw_MenuChiNhanh', 'V') IS NOT NULL
+BEGIN
+    DROP VIEW dbo.vw_MenuChiNhanh;
+    PRINT '  ✓ Đã xóa view cũ';
+END
+GO
+
+CREATE VIEW dbo.vw_MenuChiNhanh
+AS
+SELECT
+    cn.MaChiNhanh,
+    cn.TenChiNhanh,
+    dm.TenDanhMuc,
+    sp.MaSanPham,
+    sp.TenSanPham,
+    bt.MaBienThe,
+    bt.Size,
+    spcn.GiaBan + bt.GiaCongThem AS GiaBanThucTe,
+    spcn.TrangThai AS TrangThaiMenu
+FROM dbo.SanPham_ChiNhanh spcn
+JOIN dbo.ChiNhanh cn ON spcn.MaChiNhanh = cn.MaChiNhanh
+JOIN dbo.SanPham sp ON spcn.MaSanPham = sp.MaSanPham
+JOIN dbo.DanhMuc dm ON sp.MaDanhMuc = dm.MaDanhMuc
+JOIN dbo.BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
+WHERE cn.TrangThai = 1          -- Chi nhánh đang hoạt động
+  AND sp.TrangThai = 1          -- Sản phẩm đang hoạt động
+  AND bt.TrangThai = 1          -- Biến thể đang hoạt động
+  AND spcn.TrangThai = 1;       -- Menu chi nhánh đang hoạt động
+GO
+
+PRINT '  ✓ Đã tạo lại view với điều kiện lọc trạng thái';
+GO
+
+-- =============================================
+-- BƯỚC 2: Tạo Trigger đồng bộ trạng thái SanPham → SanPham_ChiNhanh
+-- =============================================
+PRINT '';
+PRINT N'BƯỚC 2: Tạo Trigger đồng bộ trạng thái...';
+
+-- Xóa trigger cũ nếu tồn tại
+IF OBJECT_ID('dbo.TRG_SanPham_DongBoTrangThaiChiNhanh', 'TR') IS NOT NULL
+BEGIN
+    DROP TRIGGER dbo.TRG_SanPham_DongBoTrangThaiChiNhanh;
+    PRINT '  ✓ Đã xóa trigger cũ';
+END
+GO
+
+CREATE TRIGGER dbo.TRG_SanPham_DongBoTrangThaiChiNhanh
+ON dbo.SanPham
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Chỉ xử lý khi cột TrangThai thay đổi
+    IF UPDATE(TrangThai)
+    BEGIN
+        -- Cập nhật trạng thái trong SanPham_ChiNhanh
+        UPDATE spcn
+        SET spcn.TrangThai = i.TrangThai
+        FROM dbo.SanPham_ChiNhanh spcn
+        JOIN inserted i ON spcn.MaSanPham = i.MaSanPham;
+        
+        -- Cập nhật trạng thái trong BienTheSanPham (giữ trigger cũ)
+        UPDATE bt
+        SET bt.TrangThai = i.TrangThai
+        FROM dbo.BienTheSanPham bt
+        JOIN inserted i ON bt.MaSanPham = i.MaSanPham;
+    END;
+END;
+GO
+
+PRINT '  ✓ Đã tạo trigger đồng bộ trạng thái SanPham → SanPham_ChiNhanh + BienTheSanPham';
+GO
+
+-- Xóa trigger cũ (chỉ đồng bộ BienTheSanPham)
+IF OBJECT_ID('dbo.TRG_SanPham_CapNhatTrangThaiBienThe', 'TR') IS NOT NULL
+BEGIN
+    DROP TRIGGER dbo.TRG_SanPham_CapNhatTrangThaiBienThe;
+    PRINT '  ✓ Đã xóa trigger cũ TRG_SanPham_CapNhatTrangThaiBienThe (đã được thay thế)';
+END
+GO
+
+-- =============================================
+-- BƯỚC 3: Tạo Stored Procedure đồng bộ sản phẩm mới vào tất cả chi nhánh
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 3: Tạo Stored Procedure đồng bộ sản phẩm...';
+
+IF OBJECT_ID('dbo.sp_DongBoSanPhamVaoChiNhanh', 'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.sp_DongBoSanPhamVaoChiNhanh;
+    PRINT '  ✓ Đã xóa stored procedure cũ';
+END
+GO
+
+CREATE PROCEDURE dbo.sp_DongBoSanPhamVaoChiNhanh
+    @MaSanPham CHAR(10),
+    @GiaBanMacDinh DECIMAL(18,2) = NULL  -- Nếu NULL, dùng GiaCoBan từ SanPham
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- Lấy giá cơ bản nếu không truyền vào
+        IF @GiaBanMacDinh IS NULL
+        BEGIN
+            SELECT @GiaBanMacDinh = GiaCoBan 
+            FROM dbo.SanPham 
+            WHERE MaSanPham = @MaSanPham;
+        END;
+        
+        -- Kiểm tra sản phẩm có tồn tại không
+        IF NOT EXISTS (SELECT 1 FROM dbo.SanPham WHERE MaSanPham = @MaSanPham)
+        BEGIN
+            THROW 50001, N'Sản phẩm không tồn tại!', 1;
+        END;
+        
+        -- Thêm sản phẩm vào tất cả chi nhánh đang hoạt động
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            @MaSanPham,
+            @GiaBanMacDinh,
+            1  -- Mặc định là hoạt động
+        FROM dbo.ChiNhanh cn
+        WHERE cn.TrangThai = 1  -- Chỉ thêm vào chi nhánh đang hoạt động
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM dbo.SanPham_ChiNhanh spcn 
+              WHERE spcn.MaChiNhanh = cn.MaChiNhanh 
+                AND spcn.MaSanPham = @MaSanPham
+          );
+        
+        DECLARE @SoChiNhanhThem INT = @@ROWCOUNT;
+        
+        COMMIT TRAN;
+        
+        PRINT '  Đã đồng bộ sản phẩm ' + @MaSanPham + ' vào ' + CAST(@SoChiNhanhThem AS NVARCHAR(10)) + ' chi nhánh';
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        THROW;
+    END CATCH
+END;
+GO
+
+PRINT '  ✓ Đã tạo stored procedure sp_DongBoSanPhamVaoChiNhanh';
+GO
+
+-- =============================================
+-- BƯỚC 4: Tạo Stored Procedure đồng bộ tất cả sản phẩm thiếu
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 4: Tạo Stored Procedure đồng bộ tất cả sản phẩm thiếu...';
+
+IF OBJECT_ID('dbo.sp_DongBoTatCaSanPham', 'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.sp_DongBoTatCaSanPham;
+    PRINT '  ✓ Đã xóa stored procedure cũ';
+END
+GO
+
+CREATE PROCEDURE dbo.sp_DongBoTatCaSanPham
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- Thêm tất cả sản phẩm thiếu vào tất cả chi nhánh
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            sp.MaSanPham,
+            sp.GiaCoBan,  -- Dùng giá cơ bản từ bảng SanPham
+            sp.TrangThai  -- Kế thừa trạng thái từ SanPham
+        FROM dbo.ChiNhanh cn
+        CROSS JOIN dbo.SanPham sp
+        WHERE cn.TrangThai = 1  -- Chỉ chi nhánh đang hoạt động
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM dbo.SanPham_ChiNhanh spcn 
+              WHERE spcn.MaChiNhanh = cn.MaChiNhanh 
+                AND spcn.MaSanPham = sp.MaSanPham
+          );
+        
+        DECLARE @TongSoThemMoi INT = @@ROWCOUNT;
+        
+        COMMIT TRAN;
+        
+        PRINT '  ✓ Đã đồng bộ ' + CAST(@TongSoThemMoi AS NVARCHAR(10)) + ' sản phẩm thiếu vào các chi nhánh';
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        THROW;
+    END CATCH
+END;
+GO
+
+PRINT '  ✓ Đã tạo stored procedure sp_DongBoTatCaSanPham';
+GO
+
+-- =============================================
+-- BƯỚC 5: Tạo Trigger tự động đồng bộ khi INSERT sản phẩm mới
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 5: Tạo Trigger tự động đồng bộ sản phẩm mới...';
+
+IF OBJECT_ID('dbo.TRG_SanPham_TuDongDongBoChiNhanh', 'TR') IS NOT NULL
+BEGIN
+    DROP TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh;
+    PRINT '   Đã xóa trigger cũ';
+END
+GO
+
+CREATE TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh
+ON dbo.SanPham
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Thêm sản phẩm mới vào tất cả chi nhánh đang hoạt động
+        INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
+        SELECT 
+            cn.MaChiNhanh,
+            i.MaSanPham,
+            i.GiaCoBan,
+            i.TrangThai
+        FROM inserted i
+        CROSS JOIN dbo.ChiNhanh cn
+        WHERE cn.TrangThai = 1;
+        
+    END TRY
+    BEGIN CATCH
+        -- Ghi log lỗi nhưng không rollback để không ảnh hưởng đến INSERT SanPham
+        DECLARE @ErrorMsg NVARCHAR(4000) = ERROR_MESSAGE();
+        PRINT N'Cảnh báo: Không thể tự động đồng bộ sản phẩm vào chi nhánh. Lỗi: ' + @ErrorMsg;
+    END CATCH
+END;
+GO
+
+PRINT '   Đã tạo trigger tự động đồng bộ sản phẩm mới vào tất cả chi nhánh';
+GO
+
+-- =============================================
+-- BƯỚC 6: Chạy đồng bộ tất cả sản phẩm thiếu
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 6: Đồng bộ tất cả sản phẩm thiếu vào chi nhánh...';
+
+EXEC dbo.sp_DongBoTatCaSanPham;
+GO
+
+-- =============================================
+-- BƯỚC 7: Kiểm tra kết quả
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 7: Kiểm tra kết quả...';
+PRINT '';
+
+-- Đếm số sản phẩm
+DECLARE @TongSanPham INT, @TongChiNhanh INT, @TongMenuChiNhanh INT;
+
+SELECT @TongSanPham = COUNT(*) FROM dbo.SanPham WHERE TrangThai = 1;
+SELECT @TongChiNhanh = COUNT(*) FROM dbo.ChiNhanh WHERE TrangThai = 1;
+SELECT @TongMenuChiNhanh = COUNT(*) FROM dbo.SanPham_ChiNhanh WHERE TrangThai = 1;
+
+PRINT '   Thống kê:';
+PRINT '     - Tổng số sản phẩm đang hoạt động: ' + CAST(@TongSanPham AS NVARCHAR(10));
+PRINT '     - Tổng số chi nhánh đang hoạt động: ' + CAST(@TongChiNhanh AS NVARCHAR(10));
+PRINT '     - Tổng số menu chi nhánh: ' + CAST(@TongMenuChiNhanh AS NVARCHAR(10));
+PRINT '     - Mong đợi: ' + CAST(@TongSanPham * @TongChiNhanh AS NVARCHAR(10));
+
+IF @TongMenuChiNhanh = @TongSanPham * @TongChiNhanh
+BEGIN
+    PRINT '   HOÀN HẢO! Tất cả sản phẩm đã được đồng bộ vào tất cả chi nhánh!';
+END
+ELSE
+BEGIN
+    PRINT '    Cảnh báo: Vẫn còn sản phẩm chưa được đồng bộ đầy đủ.';
+    PRINT '     Có thể do một số sản phẩm hoặc chi nhánh bị vô hiệu hóa.';
+END
+
+PRINT '';
+PRINT '========================================';
+PRINT ' HOÀN THÀNH SỬA LỖI ĐỒNG BỘ MENU VÀ SẢN PHẨM';
+PRINT '========================================';
+GO
+
+-- =============================================
+-- KẾT THÚC CHỈNH SỬA BỞI TRẦN GIA BẢO
+-- =============================================
 
 /* =============================================================================================================== */
 
@@ -1469,6 +1913,7 @@ SELECT
     cn.TenChiNhanh,
     tk.MaNguyenLieu,
     nl.TenNguyenLieu,
+    nl.DonViTinh,
     tk.SoLuongTon,
     tk.MucCanhBao,
     CASE WHEN tk.SoLuongTon <= tk.MucCanhBao THEN N'Cần nhập thêm' ELSE N'Bình thường' END AS MucDo
@@ -2338,986 +2783,216 @@ INSERT INTO dbo.BangLuong (MaNV, Thang, Nam, TongGioThucTe, TongLuongCa, TongThu
     ('NV00000050', 2, 2026, 179.00, 8312760.00, 540000.00, 210000.00, N'Tạm tính');
 GO
 
-INSERT INTO dbo.DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
-    ('DM00000001', N'Cà phê pha máy', N'Nhóm sản phẩm cà phê pha máy dành cho vận hành chuỗi.'),
-    ('DM00000002', N'Cà phê truyền thống', N'Nhóm sản phẩm cà phê truyền thống dành cho vận hành chuỗi.'),
-    ('DM00000003', 'Cold Brew', N'Nhóm sản phẩm cold brew dành cho vận hành chuỗi.'),
-    ('DM00000004', N'Cà phê đá xay', N'Nhóm sản phẩm cà phê đá xay dành cho vận hành chuỗi.'),
-    ('DM00000005', N'Cà phê đặc sản', N'Nhóm sản phẩm cà phê đặc sản dành cho vận hành chuỗi.'),
-    ('DM00000006', N'Trà trái cây', N'Nhóm sản phẩm trà trái cây dành cho vận hành chuỗi.'),
-    ('DM00000007', N'Trà sữa', N'Nhóm sản phẩm trà sữa dành cho vận hành chuỗi.'),
-    ('DM00000008', N'Trà macchiato', N'Nhóm sản phẩm trà macchiato dành cho vận hành chuỗi.'),
-    ('DM00000009', N'Trà nóng', N'Nhóm sản phẩm trà nóng dành cho vận hành chuỗi.'),
-    ('DM00000010', 'Matcha', N'Nhóm sản phẩm matcha dành cho vận hành chuỗi.');
-GO
-INSERT INTO dbo.DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
-    ('DM00000011', 'Chocolate', N'Nhóm sản phẩm chocolate dành cho vận hành chuỗi.'),
-    ('DM00000012', 'Yogurt', N'Nhóm sản phẩm yogurt dành cho vận hành chuỗi.'),
-    ('DM00000013', N'Nước ép', N'Nhóm sản phẩm nước ép dành cho vận hành chuỗi.'),
-    ('DM00000014', N'Soda Ý', N'Nhóm sản phẩm soda ý dành cho vận hành chuỗi.'),
-    ('DM00000015', N'Đá xay không cà phê', N'Nhóm sản phẩm đá xay không cà phê dành cho vận hành chuỗi.'),
-    ('DM00000016', N'Bánh ngọt', N'Nhóm sản phẩm bánh ngọt dành cho vận hành chuỗi.'),
-    ('DM00000017', N'Bánh mặn', N'Nhóm sản phẩm bánh mặn dành cho vận hành chuỗi.'),
-    ('DM00000018', N'Bữa sáng', N'Nhóm sản phẩm bữa sáng dành cho vận hành chuỗi.'),
-    ('DM00000019', N'Topping đóng gói', N'Nhóm sản phẩm topping đóng gói dành cho vận hành chuỗi.'),
-    ('DM00000020', N'Hạt rang', N'Nhóm sản phẩm hạt rang dành cho vận hành chuỗi.');
-GO
-INSERT INTO dbo.DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
-    ('DM00000021', N'Cà phê đóng chai', N'Nhóm sản phẩm cà phê đóng chai dành cho vận hành chuỗi.'),
-    ('DM00000022', N'Trà đóng chai', N'Nhóm sản phẩm trà đóng chai dành cho vận hành chuỗi.'),
-    ('DM00000023', N'Combo văn phòng', N'Nhóm sản phẩm combo văn phòng dành cho vận hành chuỗi.'),
-    ('DM00000024', N'Combo học sinh', N'Nhóm sản phẩm combo học sinh dành cho vận hành chuỗi.'),
-    ('DM00000025', N'Combo cặp đôi', N'Nhóm sản phẩm combo cặp đôi dành cho vận hành chuỗi.'),
-    ('DM00000026', N'Combo gia đình', N'Nhóm sản phẩm combo gia đình dành cho vận hành chuỗi.'),
-    ('DM00000027', N'Món theo mùa xuân', N'Nhóm sản phẩm món theo mùa xuân dành cho vận hành chuỗi.'),
-    ('DM00000028', N'Món theo mùa hè', N'Nhóm sản phẩm món theo mùa hè dành cho vận hành chuỗi.'),
-    ('DM00000029', N'Món theo mùa thu', N'Nhóm sản phẩm món theo mùa thu dành cho vận hành chuỗi.'),
-    ('DM00000030', N'Món theo mùa đông', N'Nhóm sản phẩm món theo mùa đông dành cho vận hành chuỗi.');
-GO
-INSERT INTO dbo.DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
-    ('DM00000031', 'Signature House Blend', N'Nhóm sản phẩm signature house blend dành cho vận hành chuỗi.'),
-    ('DM00000032', 'Espresso Bar', N'Nhóm sản phẩm espresso bar dành cho vận hành chuỗi.'),
-    ('DM00000033', N'Brew thủ công', N'Nhóm sản phẩm brew thủ công dành cho vận hành chuỗi.'),
-    ('DM00000034', N'Phin Việt Nam', N'Nhóm sản phẩm phin việt nam dành cho vận hành chuỗi.'),
-    ('DM00000035', 'Latte Art', N'Nhóm sản phẩm latte art dành cho vận hành chuỗi.'),
-    ('DM00000036', N'Menu ít đường', N'Nhóm sản phẩm menu ít đường dành cho vận hành chuỗi.'),
-    ('DM00000037', 'Menu healthy', N'Nhóm sản phẩm menu healthy dành cho vận hành chuỗi.'),
-    ('DM00000038', 'Menu vegan', N'Nhóm sản phẩm menu vegan dành cho vận hành chuỗi.'),
-    ('DM00000039', N'Menu ít caffeine', N'Nhóm sản phẩm menu ít caffeine dành cho vận hành chuỗi.'),
-    ('DM00000040', 'Menu premium', N'Nhóm sản phẩm menu premium dành cho vận hành chuỗi.');
-GO
-INSERT INTO dbo.DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
-    ('DM00000041', N'Menu giá tốt', N'Nhóm sản phẩm menu giá tốt dành cho vận hành chuỗi.'),
-    ('DM00000042', 'Menu take-away', N'Nhóm sản phẩm menu take-away dành cho vận hành chuỗi.'),
-    ('DM00000043', N'Menu giao hàng', N'Nhóm sản phẩm menu giao hàng dành cho vận hành chuỗi.'),
-    ('DM00000044', N'Menu hội viên', N'Nhóm sản phẩm menu hội viên dành cho vận hành chuỗi.'),
-    ('DM00000045', N'Menu sự kiện', N'Nhóm sản phẩm menu sự kiện dành cho vận hành chuỗi.'),
-    ('DM00000046', N'Menu lễ hội', N'Nhóm sản phẩm menu lễ hội dành cho vận hành chuỗi.'),
-    ('DM00000047', N'Món giới hạn', N'Nhóm sản phẩm món giới hạn dành cho vận hành chuỗi.'),
-    ('DM00000048', N'Tủ bánh lạnh', N'Nhóm sản phẩm tủ bánh lạnh dành cho vận hành chuỗi.'),
-    ('DM00000049', N'Phụ kiện quầy bar', N'Nhóm sản phẩm phụ kiện quầy bar dành cho vận hành chuỗi.'),
-    ('DM00000050', N'Quà tặng doanh nghiệp', N'Nhóm sản phẩm quà tặng doanh nghiệp dành cho vận hành chuỗi.');
+-- =============================================
+-- PHẦN 8: DANH MỤC VÀ SẢN PHẨM
+-- =============================================
+PRINT '';
+PRINT '========================================';
+PRINT 'PHẦN 8: THÊM DANH MỤC VÀ SẢN PHẨM';
+PRINT '========================================';
 GO
 
-INSERT INTO dbo.SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
-    ('SP00000001', 'DM00000001', 'Espresso House Blend', 39000.00, 1, N'Espresso blend đậm vị dùng cho quầy pha máy'),
-    ('SP00000002', 'DM00000002', N'Cà phê sữa phin truyền thống', 35000.00, 1, N'Cà phê phin Robusta pha cùng sữa đặc'),
-    ('SP00000003', 'DM00000003', N'Cold Brew Cam Vàng', 49000.00, 1, N'Cold brew ngâm 18 giờ kết hợp nước cam vàng'),
-    ('SP00000004', 'DM00000004', N'Mocha Đá Xay', 55000.00, 1, N'Đá xay cà phê phủ sốt chocolate'),
-    ('SP00000005', 'DM00000005', N'Single Origin Arabica Cầu Đất', 59000.00, 1, N'Cà phê đặc sản rang vừa từ Cầu Đất'),
-    ('SP00000006', 'DM00000006', N'Trà Đào Cam Sả', 45000.00, 1, N'Trà đen đào ngâm, cam vàng và sả cây'),
-    ('SP00000007', 'DM00000007', N'Trà sữa trân châu đường đen', 49000.00, 1, N'Trà sữa nền Assam kèm trân châu nâu'),
-    ('SP00000008', 'DM00000008', N'Trà Ô Long Macchiato', 47000.00, 1, N'Ô long rang nhẹ phủ kem mặn'),
-    ('SP00000009', 'DM00000009', N'Hồng trà mật ong nóng', 39000.00, 1, N'Hồng trà pha mật ong và lát chanh tươi'),
-    ('SP00000010', 'DM00000010', 'Matcha Latte', 49000.00, 1, N'Matcha Nhật phối sữa tươi thanh vị');
-GO
-INSERT INTO dbo.SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
-    ('SP00000011', 'DM00000011', N'Chocolate Nóng', 45000.00, 1, N'Chocolate đen nóng cho buổi tối'),
-    ('SP00000012', 'DM00000012', N'Yogurt Việt Quất', 47000.00, 1, N'Sữa chua đánh đá cùng sốt việt quất'),
-    ('SP00000013', 'DM00000013', N'Nước ép Cam Cà Rốt', 43000.00, 1, N'Nước ép tươi trong ngày'),
-    ('SP00000014', 'DM00000014', N'Soda Dâu Kiwi', 44000.00, 1, N'Soda Ý vị dâu và kiwi'),
-    ('SP00000015', 'DM00000015', N'Cookies & Cream Đá Xay', 52000.00, 1, N'Đá xay bánh quy sữa'),
-    ('SP00000016', 'DM00000016', N'Croissant Bơ', 32000.00, 1, N'Bánh sừng bò nướng bơ thơm'),
-    ('SP00000017', 'DM00000017', N'Bánh mì chà bông phô mai', 38000.00, 1, N'Bánh mặn dùng buổi sáng'),
-    ('SP00000018', 'DM00000018', N'Breakfast Sandwich Gà Xé', 48000.00, 1, N'Sandwich gà xé và xà lách'),
-    ('SP00000019', 'DM00000019', N'Combo topping trân châu', 15000.00, 1, N'Topping dùng kèm đồ uống'),
-    ('SP00000020', 'DM00000020', 'House Blend 250g', 145000.00, 1, N'Hạt rang house blend đóng gói 250g');
-GO
-INSERT INTO dbo.SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
-    ('SP00000021', 'DM00000021', 'Cold Brew Bottle 500ml', 68000.00, 1, N'Cold brew đóng chai dùng mang đi'),
-    ('SP00000022', 'DM00000022', N'Trà Đào Chai 500ml', 62000.00, 1, N'Trà đào đóng chai bán kèm'),
-    ('SP00000023', 'DM00000023', N'Combo văn phòng 2 cà phê 2 bánh', 159000.00, 1, N'Combo đặt họp nhóm nhỏ'),
-    ('SP00000024', 'DM00000024', N'Combo học nhóm 2 trà 2 bánh', 149000.00, 1, N'Combo tiết kiệm cho nhóm 2 người'),
-    ('SP00000025', 'DM00000025', N'Combo cặp đôi Latte & Cake', 129000.00, 1, N'Combo đồ uống và bánh cho 2 người'),
-    ('SP00000026', 'DM00000026', N'Combo gia đình 4 nước 2 bánh', 289000.00, 1, N'Combo giao hàng cuối tuần'),
-    ('SP00000027', 'DM00000027', 'Spring Blossom Tea', 52000.00, 1, N'Trà hoa quả theo mùa xuân'),
-    ('SP00000028', 'DM00000028', 'Summer Passion Cooler', 54000.00, 1, N'Thức uống mát lạnh mùa hè'),
-    ('SP00000029', 'DM00000029', 'Autumn Cinnamon Latte', 56000.00, 1, N'Latte quế theo mùa thu'),
-    ('SP00000030', 'DM00000030', 'Winter Dark Cocoa', 57000.00, 1, N'Chocolate đậm vị cho mùa đông');
-GO
-INSERT INTO dbo.SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
-    ('SP00000031', 'DM00000031', N'Signature Phin Muối', 46000.00, 1, N'Cà phê muối phong cách Huế'),
-    ('SP00000032', 'DM00000032', N'Americano Đá', 40000.00, 1, N'Americano đá nhẹ vị dễ uống'),
-    ('SP00000033', 'DM00000033', 'V60 Ethiopia', 65000.00, 1, N'Pour-over Ethiopia hương hoa quả'),
-    ('SP00000034', 'DM00000034', N'Bạc xỉu đá', 38000.00, 1, N'Sữa nhiều cà phê ít theo kiểu Sài Gòn'),
-    ('SP00000035', 'DM00000035', 'Caramel Latte Art', 56000.00, 1, N'Latte caramel chú trọng tạo hình'),
-    ('SP00000036', 'DM00000036', N'Latte Ít Đường', 47000.00, 1, N'Phiên bản giảm ngọt cho khách ăn kiêng'),
-    ('SP00000037', 'DM00000037', 'Granola Yogurt Cup', 52000.00, 1, N'Cốc granola sữa chua và trái cây'),
-    ('SP00000038', 'DM00000038', 'Oat Milk Matcha', 56000.00, 1, N'Matcha kết hợp sữa yến mạch'),
-    ('SP00000039', 'DM00000039', 'Decaf Cappuccino', 52000.00, 1, N'Cappuccino dùng hạt decaf'),
-    ('SP00000040', 'DM00000040', 'Premium Geisha Handbrew', 119000.00, 1, N'Món premium số lượng giới hạn');
-GO
-INSERT INTO dbo.SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
-    ('SP00000041', 'DM00000041', N'Cà phê đen đá tiết kiệm', 29000.00, 1, N'Món giá tốt bán buổi sáng'),
-    ('SP00000042', 'DM00000042', 'Take-away Americano', 37000.00, 1, N'Americano ưu tiên mang đi'),
-    ('SP00000043', 'DM00000043', N'Bộ 4 Cold Brew giao hàng', 235000.00, 1, N'Combo cold brew cho đơn giao'),
-    ('SP00000044', 'DM00000044', N'Thẻ hội viên quà tặng', 99000.00, 1, N'Sản phẩm bán tại quầy cho hội viên'),
-    ('SP00000045', 'DM00000045', N'Set sự kiện 10 ly trà đào', 430000.00, 1, N'Set phục vụ workshop nhỏ'),
-    ('SP00000046', 'DM00000046', N'Latte Gừng Giáng Sinh', 59000.00, 1, N'Món theo mùa lễ hội'),
-    ('SP00000047', 'DM00000047', N'Tiramisu giới hạn cuối tuần', 55000.00, 1, N'Bánh tiramisu số lượng giới hạn'),
-    ('SP00000048', 'DM00000048', N'Cheesecake Việt Quất', 52000.00, 1, N'Bánh lạnh bán cả ngày'),
-    ('SP00000049', 'DM00000049', N'Bình giữ nhiệt logo GIBOR', 189000.00, 1, N'Phụ kiện quầy bar và quà tặng'),
-    ('SP00000050', 'DM00000050', 'Gift Box Premium Coffee', 329000.00, 1, N'Hộp quà doanh nghiệp gồm hạt và voucher');
+-- =============================================
+-- BƯỚC 1: Thêm 5 danh mục
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 1: Thêm 5 danh mục...';
+
+INSERT INTO DanhMuc (MaDanhMuc, TenDanhMuc, MoTa) VALUES
+('DM01', N'Cà phê', N'Các loại cà phê truyền thống và hiện đại'),
+('DM02', N'Trà & Trà sữa', N'Trà các loại và trà sữa'),
+('DM03', N'Đá xay', N'Các món đá xay, smoothie'),
+('DM04', N'Bánh & Snack', N'Bánh ngọt, bánh mặn, snack'),
+('DM05', N'Nước ép & Soda', N'Nước ép trái cây và soda');
+
+PRINT '  ✓ Đã thêm 5 danh mục';
 GO
 
-INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai) VALUES
-    ('CN00000001', 'SP00000001', 41000.00, 1),
-    ('CN00000001', 'SP00000002', 35000.00, 1),
-    ('CN00000001', 'SP00000006', 46000.00, 1),
-    ('CN00000001', 'SP00000010', 51000.00, 1),
-    ('CN00000001', 'SP00000031', 48000.00, 1),
-    ('CN00000002', 'SP00000001', 39000.00, 1),
-    ('CN00000002', 'SP00000002', 36000.00, 1),
-    ('CN00000002', 'SP00000006', 47000.00, 1),
-    ('CN00000002', 'SP00000010', 49000.00, 1),
-    ('CN00000002', 'SP00000031', 46000.00, 1);
-GO
-INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai) VALUES
-    ('CN00000003', 'SP00000001', 40000.00, 1),
-    ('CN00000003', 'SP00000002', 37000.00, 1),
-    ('CN00000003', 'SP00000006', 45000.00, 1),
-    ('CN00000003', 'SP00000010', 50000.00, 1),
-    ('CN00000003', 'SP00000031', 47000.00, 1),
-    ('CN00000004', 'SP00000001', 41000.00, 1),
-    ('CN00000004', 'SP00000002', 35000.00, 1),
-    ('CN00000004', 'SP00000006', 46000.00, 1),
-    ('CN00000004', 'SP00000010', 51000.00, 1),
-    ('CN00000004', 'SP00000031', 48000.00, 1);
-GO
-INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai) VALUES
-    ('CN00000005', 'SP00000001', 39000.00, 1),
-    ('CN00000005', 'SP00000002', 36000.00, 1),
-    ('CN00000005', 'SP00000006', 47000.00, 1),
-    ('CN00000005', 'SP00000010', 49000.00, 1),
-    ('CN00000005', 'SP00000031', 46000.00, 1),
-    ('CN00000006', 'SP00000001', 40000.00, 1),
-    ('CN00000006', 'SP00000002', 37000.00, 1),
-    ('CN00000006', 'SP00000006', 45000.00, 1),
-    ('CN00000006', 'SP00000010', 50000.00, 1),
-    ('CN00000006', 'SP00000031', 47000.00, 1);
-GO
-INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai) VALUES
-    ('CN00000007', 'SP00000001', 41000.00, 1),
-    ('CN00000007', 'SP00000002', 35000.00, 1),
-    ('CN00000007', 'SP00000006', 46000.00, 1),
-    ('CN00000007', 'SP00000010', 51000.00, 1),
-    ('CN00000007', 'SP00000031', 48000.00, 1),
-    ('CN00000008', 'SP00000001', 39000.00, 1),
-    ('CN00000008', 'SP00000002', 36000.00, 1),
-    ('CN00000008', 'SP00000006', 47000.00, 1),
-    ('CN00000008', 'SP00000010', 49000.00, 1),
-    ('CN00000008', 'SP00000031', 46000.00, 1);
-GO
-INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai) VALUES
-    ('CN00000009', 'SP00000001', 40000.00, 1),
-    ('CN00000009', 'SP00000002', 37000.00, 1),
-    ('CN00000009', 'SP00000006', 45000.00, 1),
-    ('CN00000009', 'SP00000010', 50000.00, 1),
-    ('CN00000009', 'SP00000031', 47000.00, 1),
-    ('CN00000010', 'SP00000001', 41000.00, 1),
-    ('CN00000010', 'SP00000002', 35000.00, 1),
-    ('CN00000010', 'SP00000006', 46000.00, 1),
-    ('CN00000010', 'SP00000010', 51000.00, 1),
-    ('CN00000010', 'SP00000031', 48000.00, 1);
+-- =============================================
+-- BƯỚC 2: Thêm 50 sản phẩm
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 2: Thêm 50 sản phẩm...';
+
+-- Cà phê (15 món)
+INSERT INTO SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
+('SP0001', 'DM01', N'Cà phê đen đá', 25000, 1, N'Cà phê đen truyền thống'),
+('SP0002', 'DM01', N'Cà phê sữa đá', 28000, 1, N'Cà phê sữa đá'),
+('SP0003', 'DM01', N'Bạc xỉu', 30000, 1, N'Cà phê sữa nhiều sữa'),
+('SP0004', 'DM01', N'Cà phê đen nóng', 25000, 1, N'Cà phê đen nóng'),
+('SP0005', 'DM01', N'Cà phê sữa nóng', 28000, 1, N'Cà phê sữa nóng'),
+('SP0006', 'DM01', N'Espresso', 30000, 1, N'Cà phê Espresso đậm đà'),
+('SP0007', 'DM01', N'Americano', 32000, 1, N'Cà phê Americano'),
+('SP0008', 'DM01', N'Cappuccino', 38000, 1, N'Cappuccino với bọt sữa'),
+('SP0009', 'DM01', N'Latte', 40000, 1, N'Cà phê Latte'),
+('SP0010', 'DM01', N'Mocha', 42000, 1, N'Cà phê Mocha socola'),
+('SP0011', 'DM01', N'Caramel Macchiato', 45000, 1, N'Macchiato caramel'),
+('SP0012', 'DM01', N'Cà phê dừa', 38000, 1, N'Cà phê dừa mát lạnh'),
+('SP0013', 'DM01', N'Cà phê trứng', 40000, 1, N'Cà phê trứng Hà Nội'),
+('SP0014', 'DM01', N'Cà phê muối', 38000, 1, N'Cà phê muối độc đáo'),
+('SP0015', 'DM01', N'Cold Brew', 42000, 1, N'Cà phê ủ lạnh');
+
+-- Trà & Trà sữa (12 món)
+INSERT INTO SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
+('SP0016', 'DM02', N'Trà đào cam sả', 35000, 1, N'Trà đào cam sả'),
+('SP0017', 'DM02', N'Trà vải', 32000, 1, N'Trà vải thanh mát'),
+('SP0018', 'DM02', N'Trà chanh', 30000, 1, N'Trà chanh tươi'),
+('SP0019', 'DM02', N'Trà sữa truyền thống', 35000, 1, N'Trà sữa truyền thống'),
+('SP0020', 'DM02', N'Trà sữa trân châu đường đen', 40000, 1, N'Trà sữa trân châu'),
+('SP0021', 'DM02', N'Trà sữa matcha', 42000, 1, N'Trà sữa matcha Nhật'),
+('SP0022', 'DM02', N'Trà sữa socola', 40000, 1, N'Trà sữa socola'),
+('SP0023', 'DM02', N'Trà sữa dâu tây', 42000, 1, N'Trà sữa dâu tây'),
+('SP0024', 'DM02', N'Hồng trà sữa', 38000, 1, N'Hồng trà sữa'),
+('SP0025', 'DM02', N'Ô long sữa', 38000, 1, N'Trà ô long sữa'),
+('SP0026', 'DM02', N'Trà xanh latte', 40000, 1, N'Trà xanh latte'),
+('SP0027', 'DM02', N'Trà sen vàng', 35000, 1, N'Trà sen vàng');
+
+-- Đá xay (10 món)
+INSERT INTO SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
+('SP0028', 'DM03', N'Đá xay cà phê', 45000, 1, N'Đá xay cà phê'),
+('SP0029', 'DM03', N'Đá xay matcha', 48000, 1, N'Đá xay matcha'),
+('SP0030', 'DM03', N'Đá xay socola', 45000, 1, N'Đá xay socola'),
+('SP0031', 'DM03', N'Đá xay dâu tây', 48000, 1, N'Đá xay dâu tây'),
+('SP0032', 'DM03', N'Đá xay xoài', 48000, 1, N'Đá xay xoài'),
+('SP0033', 'DM03', N'Đá xay việt quất', 50000, 1, N'Đá xay việt quất'),
+('SP0034', 'DM03', N'Đá xay cookies & cream', 50000, 1, N'Đá xay cookies'),
+('SP0035', 'DM03', N'Đá xay caramel', 48000, 1, N'Đá xay caramel'),
+('SP0036', 'DM03', N'Smoothie bơ', 50000, 1, N'Smoothie bơ'),
+('SP0037', 'DM03', N'Smoothie dưa hấu', 45000, 1, N'Smoothie dưa hấu');
+
+-- Bánh & Snack (8 món - chỉ 1 size)
+INSERT INTO SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
+('SP0038', 'DM04', N'Bánh croissant bơ', 25000, 1, N'Bánh croissant'),
+('SP0039', 'DM04', N'Bánh mì que', 15000, 1, N'Bánh mì que giòn'),
+('SP0040', 'DM04', N'Tiramisu', 35000, 1, N'Bánh Tiramisu Ý'),
+('SP0041', 'DM04', N'Cheesecake dâu', 40000, 1, N'Cheesecake dâu'),
+('SP0042', 'DM04', N'Brownie socola', 30000, 1, N'Brownie socola'),
+('SP0043', 'DM04', N'Bánh flan', 20000, 1, N'Bánh flan'),
+('SP0044', 'DM04', N'Mousse chanh dây', 35000, 1, N'Mousse chanh dây'),
+('SP0045', 'DM04', N'Bánh bông lan trứng muối', 28000, 1, N'Bông lan trứng muối');
+
+-- Nước ép & Soda (5 món)
+INSERT INTO SanPham (MaSanPham, MaDanhMuc, TenSanPham, GiaCoBan, TrangThai, MoTa) VALUES
+('SP0046', 'DM05', N'Nước ép cam', 35000, 1, N'Nước ép cam tươi'),
+('SP0047', 'DM05', N'Nước ép dưa hấu', 32000, 1, N'Nước ép dưa hấu'),
+('SP0048', 'DM05', N'Nước ép táo', 35000, 1, N'Nước ép táo'),
+('SP0049', 'DM05', N'Soda chanh', 28000, 1, N'Soda chanh'),
+('SP0050', 'DM05', N'Soda việt quất', 30000, 1, N'Soda việt quất');
+
+PRINT '  ✓ Đã thêm 50 sản phẩm';
 GO
 
-INSERT INTO dbo.BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai) VALUES
-    ('BT00000001', 'SP00000001', N'Nhỏ', 0.00, 1),
-    ('BT00000002', 'SP00000001', N'Vừa', 6000.00, 1),
-    ('BT00000003', 'SP00000001', N'Lớn', 12000.00, 1),
-    ('BT00000004', 'SP00000002', N'Nhỏ', 0.00, 1),
-    ('BT00000005', 'SP00000002', N'Vừa', 6000.00, 1),
-    ('BT00000006', 'SP00000002', N'Lớn', 12000.00, 1),
-    ('BT00000007', 'SP00000003', N'Nhỏ', 0.00, 1),
-    ('BT00000008', 'SP00000003', N'Vừa', 6000.00, 1),
-    ('BT00000009', 'SP00000003', N'Lớn', 12000.00, 1),
-    ('BT00000010', 'SP00000004', N'Nhỏ', 0.00, 1);
-GO
-INSERT INTO dbo.BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai) VALUES
-    ('BT00000011', 'SP00000004', N'Vừa', 6000.00, 1),
-    ('BT00000012', 'SP00000004', N'Lớn', 12000.00, 1),
-    ('BT00000013', 'SP00000005', N'Nhỏ', 0.00, 1),
-    ('BT00000014', 'SP00000005', N'Vừa', 6000.00, 1),
-    ('BT00000015', 'SP00000005', N'Lớn', 12000.00, 1),
-    ('BT00000016', 'SP00000006', N'Nhỏ', 0.00, 1),
-    ('BT00000017', 'SP00000006', N'Vừa', 6000.00, 1),
-    ('BT00000018', 'SP00000006', N'Lớn', 12000.00, 1),
-    ('BT00000019', 'SP00000007', N'Nhỏ', 0.00, 1),
-    ('BT00000020', 'SP00000007', N'Vừa', 6000.00, 1);
-GO
-INSERT INTO dbo.BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai) VALUES
-    ('BT00000021', 'SP00000007', N'Lớn', 12000.00, 1),
-    ('BT00000022', 'SP00000008', N'Nhỏ', 0.00, 1),
-    ('BT00000023', 'SP00000008', N'Vừa', 6000.00, 1),
-    ('BT00000024', 'SP00000008', N'Lớn', 12000.00, 1),
-    ('BT00000025', 'SP00000009', N'Nhỏ', 0.00, 1),
-    ('BT00000026', 'SP00000009', N'Vừa', 6000.00, 1),
-    ('BT00000027', 'SP00000009', N'Lớn', 12000.00, 1),
-    ('BT00000028', 'SP00000010', N'Nhỏ', 0.00, 1),
-    ('BT00000029', 'SP00000010', N'Vừa', 6000.00, 1),
-    ('BT00000030', 'SP00000010', N'Lớn', 12000.00, 1);
-GO
-INSERT INTO dbo.BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai) VALUES
-    ('BT00000031', 'SP00000011', N'Nhỏ', 0.00, 1),
-    ('BT00000032', 'SP00000011', N'Vừa', 6000.00, 1),
-    ('BT00000033', 'SP00000011', N'Lớn', 12000.00, 1),
-    ('BT00000034', 'SP00000012', N'Nhỏ', 0.00, 1),
-    ('BT00000035', 'SP00000012', N'Vừa', 6000.00, 1),
-    ('BT00000036', 'SP00000012', N'Lớn', 12000.00, 1),
-    ('BT00000037', 'SP00000013', N'Nhỏ', 0.00, 1),
-    ('BT00000038', 'SP00000013', N'Vừa', 6000.00, 1),
-    ('BT00000039', 'SP00000013', N'Lớn', 12000.00, 1),
-    ('BT00000040', 'SP00000014', N'Nhỏ', 0.00, 1);
-GO
-INSERT INTO dbo.BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai) VALUES
-    ('BT00000041', 'SP00000014', N'Vừa', 6000.00, 1),
-    ('BT00000042', 'SP00000014', N'Lớn', 12000.00, 1),
-    ('BT00000043', 'SP00000015', N'Nhỏ', 0.00, 1),
-    ('BT00000044', 'SP00000015', N'Vừa', 6000.00, 1),
-    ('BT00000045', 'SP00000015', N'Lớn', 12000.00, 1),
-    ('BT00000046', 'SP00000016', N'Nhỏ', 0.00, 1),
-    ('BT00000047', 'SP00000016', N'Vừa', 6000.00, 1),
-    ('BT00000048', 'SP00000016', N'Lớn', 12000.00, 1),
-    ('BT00000049', 'SP00000017', N'Vừa', 6000.00, 1),
-    ('BT00000050', 'SP00000017', N'Lớn', 12000.00, 1);
+-- =============================================
+-- BƯỚC 3: Thêm biến thể (size)
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 3: Thêm biến thể size...';
+
+-- Biến thể cho đồ uống (SP0001-SP0037, SP0046-SP0050) - 3 size
+DECLARE @MaSP CHAR(10);
+DECLARE @Counter INT = 1;
+
+WHILE @Counter <= 50
+BEGIN
+    SET @MaSP = 'SP' + RIGHT('0000' + CAST(@Counter AS VARCHAR(4)), 4);
+    
+    -- Bỏ qua bánh (SP0038-SP0045)
+    IF @Counter NOT BETWEEN 38 AND 45
+    BEGIN
+        -- Size Nhỏ
+        INSERT INTO BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai)
+        VALUES ('BT' + RIGHT('0000' + CAST((@Counter * 3 - 2) AS VARCHAR(4)), 4), @MaSP, N'Nhỏ', 0, 1);
+        
+        -- Size Vừa
+        INSERT INTO BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai)
+        VALUES ('BT' + RIGHT('0000' + CAST((@Counter * 3 - 1) AS VARCHAR(4)), 4), @MaSP, N'Vừa', 5000, 1);
+        
+        -- Size Lớn
+        INSERT INTO BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai)
+        VALUES ('BT' + RIGHT('0000' + CAST((@Counter * 3) AS VARCHAR(4)), 4), @MaSP, N'Lớn', 10000, 1);
+    END
+    ELSE
+    BEGIN
+        -- Bánh chỉ có 1 size
+        INSERT INTO BienTheSanPham (MaBienThe, MaSanPham, Size, GiaCongThem, TrangThai)
+        VALUES ('BT' + RIGHT('00000000' + CAST(@Counter AS VARCHAR(4)), 4), @MaSP, N'Vừa', 0, 1);
+    END
+    
+    SET @Counter = @Counter + 1;
+END
+
+PRINT '  ✓ Đã thêm biến thể (42 món × 3 size + 8 món × 1 size = 134 biến thể)';
 GO
 
-INSERT INTO dbo.TuyChonThem (MaTuyChon, TenTuyChon, GiaCongThem, TrangThai) VALUES
-    ('TC00000001', N'Không đá', 0.00, 1),
-    ('TC00000002', N'Ít đá', 0.00, 1),
-    ('TC00000003', N'Đá vừa', 0.00, 1),
-    ('TC00000004', N'Nhiều đá', 0.00, 1),
-    ('TC00000005', N'0% đường', 0.00, 1),
-    ('TC00000006', N'30% đường', 0.00, 1),
-    ('TC00000007', N'50% đường', 0.00, 1),
-    ('TC00000008', N'70% đường', 0.00, 1),
-    ('TC00000009', N'100% đường', 0.00, 1),
-    ('TC00000010', N'Thêm shot espresso', 12000.00, 1);
-GO
-INSERT INTO dbo.TuyChonThem (MaTuyChon, TenTuyChon, GiaCongThem, TrangThai) VALUES
-    ('TC00000011', 'Double shot espresso', 20000.00, 1),
-    ('TC00000012', N'Sữa yến mạch', 10000.00, 1),
-    ('TC00000013', N'Sữa hạnh nhân', 10000.00, 1),
-    ('TC00000014', N'Sữa dừa', 9000.00, 1),
-    ('TC00000015', N'Foam phô mai', 12000.00, 1),
-    ('TC00000016', 'Kem whipping', 10000.00, 1),
-    ('TC00000017', N'Sốt caramel', 8000.00, 1),
-    ('TC00000018', N'Sốt chocolate', 8000.00, 1),
-    ('TC00000019', 'Siro vanilla', 7000.00, 1),
-    ('TC00000020', 'Siro hazelnut', 7000.00, 1);
-GO
-INSERT INTO dbo.TuyChonThem (MaTuyChon, TenTuyChon, GiaCongThem, TrangThai) VALUES
-    ('TC00000021', N'Trân châu đen', 10000.00, 1),
-    ('TC00000022', N'Trân châu trắng', 10000.00, 1),
-    ('TC00000023', N'Thạch cà phê', 9000.00, 1),
-    ('TC00000024', N'Thạch đào', 9000.00, 1),
-    ('TC00000025', N'Nha đam', 9000.00, 1),
-    ('TC00000026', N'Đào ngâm', 10000.00, 1),
-    ('TC00000027', N'Vải ngâm', 10000.00, 1),
-    ('TC00000028', N'Cam lát tươi', 8000.00, 1),
-    ('TC00000029', N'Chanh lát tươi', 5000.00, 1),
-    ('TC00000030', N'Sả cây', 5000.00, 1);
-GO
-INSERT INTO dbo.TuyChonThem (MaTuyChon, TenTuyChon, GiaCongThem, TrangThai) VALUES
-    ('TC00000031', N'Quế bột', 4000.00, 1),
-    ('TC00000032', N'Bột matcha extra', 12000.00, 1),
-    ('TC00000033', N'Bột cacao extra', 10000.00, 1),
-    ('TC00000034', N'Kem mặn', 12000.00, 1),
-    ('TC00000035', N'Muối kem', 10000.00, 1),
-    ('TC00000036', N'Ít caffeine', 5000.00, 1),
-    ('TC00000037', 'Decaf', 12000.00, 1),
-    ('TC00000038', N'Xay mịn', 0.00, 1),
-    ('TC00000039', N'Mang đi', 0.00, 1),
-    ('TC00000040', N'Dùng tại quán', 0.00, 1);
-GO
-INSERT INTO dbo.TuyChonThem (MaTuyChon, TenTuyChon, GiaCongThem, TrangThai) VALUES
-    ('TC00000041', N'Ly giấy lớn', 3000.00, 1),
-    ('TC00000042', N'Ống hút giấy', 1000.00, 1),
-    ('TC00000043', N'Không ống hút', 0.00, 1),
-    ('TC00000044', N'Tách nóng', 2000.00, 1),
-    ('TC00000045', N'Đá riêng', 3000.00, 1),
-    ('TC00000046', N'Thêm syrup gừng', 8000.00, 1),
-    ('TC00000047', 'Topping granola', 12000.00, 1),
-    ('TC00000048', N'Phô mai lát', 10000.00, 1),
-    ('TC00000049', N'Chà bông extra', 10000.00, 1),
-    ('TC00000050', N'Thêm mật ong', 8000.00, 1);
+-- =============================================
+-- BƯỚC 4: Đồng bộ sản phẩm vào chi nhánh
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 4: Đồng bộ sản phẩm vào tất cả chi nhánh...';
+
+EXEC sp_DongBoTatCaSanPham;
 GO
 
-INSERT INTO dbo.SanPham_TuyChon (MaSanPham, MaTuyChon) VALUES
-    ('SP00000001', 'TC00000010'),
-    ('SP00000001', 'TC00000011'),
-    ('SP00000001', 'TC00000017'),
-    ('SP00000001', 'TC00000018'),
-    ('SP00000001', 'TC00000044'),
-    ('SP00000002', 'TC00000017'),
-    ('SP00000002', 'TC00000018'),
-    ('SP00000002', 'TC00000044'),
-    ('SP00000002', 'TC00000045'),
-    ('SP00000002', 'TC00000050');
-GO
-INSERT INTO dbo.SanPham_TuyChon (MaSanPham, MaTuyChon) VALUES
-    ('SP00000003', 'TC00000001'),
-    ('SP00000003', 'TC00000002'),
-    ('SP00000003', 'TC00000026'),
-    ('SP00000003', 'TC00000028'),
-    ('SP00000003', 'TC00000039'),
-    ('SP00000004', 'TC00000016'),
-    ('SP00000004', 'TC00000017'),
-    ('SP00000004', 'TC00000018'),
-    ('SP00000004', 'TC00000033'),
-    ('SP00000004', 'TC00000039');
-GO
-INSERT INTO dbo.SanPham_TuyChon (MaSanPham, MaTuyChon) VALUES
-    ('SP00000005', 'TC00000010'),
-    ('SP00000005', 'TC00000011'),
-    ('SP00000005', 'TC00000017'),
-    ('SP00000005', 'TC00000018'),
-    ('SP00000005', 'TC00000044'),
-    ('SP00000006', 'TC00000001'),
-    ('SP00000006', 'TC00000002'),
-    ('SP00000006', 'TC00000024'),
-    ('SP00000006', 'TC00000026'),
-    ('SP00000006', 'TC00000030');
-GO
-INSERT INTO dbo.SanPham_TuyChon (MaSanPham, MaTuyChon) VALUES
-    ('SP00000007', 'TC00000005'),
-    ('SP00000007', 'TC00000006'),
-    ('SP00000007', 'TC00000007'),
-    ('SP00000007', 'TC00000021'),
-    ('SP00000007', 'TC00000022'),
-    ('SP00000008', 'TC00000015'),
-    ('SP00000008', 'TC00000034'),
-    ('SP00000008', 'TC00000017'),
-    ('SP00000008', 'TC00000018'),
-    ('SP00000008', 'TC00000039');
-GO
-INSERT INTO dbo.SanPham_TuyChon (MaSanPham, MaTuyChon) VALUES
-    ('SP00000009', 'TC00000044'),
-    ('SP00000009', 'TC00000050'),
-    ('SP00000009', 'TC00000029'),
-    ('SP00000009', 'TC00000031'),
-    ('SP00000009', 'TC00000036'),
-    ('SP00000010', 'TC00000012'),
-    ('SP00000010', 'TC00000013'),
-    ('SP00000010', 'TC00000032'),
-    ('SP00000010', 'TC00000044'),
-    ('SP00000010', 'TC00000039');
+-- =============================================
+-- BƯỚC 5: Kiểm tra kết quả
+-- =============================================
+PRINT '';
+PRINT 'BƯỚC 5: Kiểm tra kết quả...';
+
+DECLARE @TongDanhMuc INT, @TongSanPham INT, @TongBienThe INT, @TongMenuChiNhanh INT, @TongChiNhanh INT;
+
+SELECT @TongDanhMuc = COUNT(*) FROM DanhMuc;
+SELECT @TongSanPham = COUNT(*) FROM SanPham;
+SELECT @TongBienThe = COUNT(*) FROM BienTheSanPham;
+SELECT @TongChiNhanh = COUNT(*) FROM ChiNhanh WHERE TrangThai = 1;
+SELECT @TongMenuChiNhanh = COUNT(*) FROM SanPham_ChiNhanh;
+
+PRINT '';
+PRINT '  📊 Thống kê:';
+PRINT '     - Tổng danh mục: ' + CAST(@TongDanhMuc AS NVARCHAR(10)) + ' (mong đợi: 5)';
+PRINT '     - Tổng sản phẩm: ' + CAST(@TongSanPham AS NVARCHAR(10)) + ' (mong đợi: 50)';
+PRINT '     - Tổng biến thể: ' + CAST(@TongBienThe AS NVARCHAR(10)) + ' (mong đợi: 134)';
+PRINT '     - Tổng chi nhánh: ' + CAST(@TongChiNhanh AS NVARCHAR(10));
+PRINT '     - Tổng menu chi nhánh: ' + CAST(@TongMenuChiNhanh AS NVARCHAR(10)) + ' (mong đợi: ' + CAST(@TongSanPham * @TongChiNhanh AS NVARCHAR(10)) + ')';
+
+PRINT '';
+IF @TongDanhMuc = 5 AND @TongSanPham = 50 AND @TongBienThe = 134
+BEGIN
+    PRINT '  ✅ HOÀN HẢO! Dữ liệu đã được cập nhật thành công!';
+END
+ELSE
+BEGIN
+    PRINT '  ⚠️  Cảnh báo: Số lượng không khớp với mong đợi.';
+END
+
+-- Hiển thị thống kê theo danh mục
+PRINT '';
+PRINT '  📋 Thống kê theo danh mục:';
+SELECT 
+    dm.TenDanhMuc,
+    COUNT(sp.MaSanPham) AS SoLuongSanPham
+FROM DanhMuc dm
+LEFT JOIN SanPham sp ON dm.MaDanhMuc = sp.MaDanhMuc
+GROUP BY dm.MaDanhMuc, dm.TenDanhMuc
+ORDER BY dm.MaDanhMuc;
+
+PRINT '';
+PRINT '========================================';
+PRINT '✅ HOÀN THÀNH THÊM DANH MỤC VÀ SẢN PHẨM';
+PRINT '========================================';
 GO
 
-INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, Email, DiaChi, TrangThai) VALUES
-    ('NCC0000001', N'Huế Coffee Supply 1', '0890908075', 'contact01@supplier.vn', N'54 Trường Chinh, Huế', N'Đang hợp tác'),
-    ('NCC0000002', N'Đà Nẵng Milk & Dairy 1', '0754502486', 'contact02@supplier.vn', N'196 Điện Biên Phủ, Đà Nẵng', N'Đang hợp tác'),
-    ('NCC0000003', 'TP.HCM Fruit Hub 1', '0738508907', 'contact03@supplier.vn', N'145 Nguyễn Huệ, TP.HCM', N'Đang hợp tác'),
-    ('NCC0000004', N'Hà Nội Bakery Source 1', '0762409658', 'contact04@supplier.vn', N'58 Trường Chinh, Hà Nội', N'Đang hợp tác'),
-    ('NCC0000005', N'Đà Lạt Packaging 1', '0368608612', 'contact05@supplier.vn', N'118 Phạm Văn Đồng, Đà Lạt', N'Đang hợp tác'),
-    ('NCC0000006', N'Buôn Ma Thuột Syrup House 1', '0938089166', 'contact06@supplier.vn', N'126 Điện Biên Phủ, Buôn Ma Thuột', N'Đang hợp tác'),
-    ('NCC0000007', 'Nha Trang Tea Farm 1', '0712534217', 'contact07@supplier.vn', N'136 Nguyễn Văn Linh, Nha Trang', N'Đang hợp tác'),
-    ('NCC0000008', N'Quy Nhơn Ice Factory 1', '0730150759', 'contact08@supplier.vn', N'197 Hai Bà Trưng, Quy Nhơn', N'Đang hợp tác'),
-    ('NCC0000009', N'Cần Thơ Equipment Care 1', '0906202700', 'contact09@supplier.vn', N'55 Phan Chu Trinh, Cần Thơ', N'Đang hợp tác'),
-    ('NCC0000010', N'Bình Dương Organic Farm 1', '0961124923', 'contact10@supplier.vn', N'67 Hoàng Diệu, Bình Dương', N'Đang hợp tác');
-GO
-INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, Email, DiaChi, TrangThai) VALUES
-    ('NCC0000011', N'Huế Coffee Supply 2', '0396414756', 'contact11@supplier.vn', N'111 Hoàng Hoa Thám, Huế', N'Đang hợp tác'),
-    ('NCC0000012', N'Đà Nẵng Milk & Dairy 2', '0853640499', 'contact12@supplier.vn', N'183 Nguyễn Thị Minh Khai, Đà Nẵng', N'Ngừng hợp tác'),
-    ('NCC0000013', 'TP.HCM Fruit Hub 2', '0914305904', 'contact13@supplier.vn', '67 Phan Chu Trinh, TP.HCM', N'Đang hợp tác'),
-    ('NCC0000014', N'Hà Nội Bakery Source 2', '0393403697', 'contact14@supplier.vn', N'113 Hai Bà Trưng, Hà Nội', N'Đang hợp tác'),
-    ('NCC0000015', N'Đà Lạt Packaging 2', '0974813739', 'contact15@supplier.vn', N'137 Phạm Văn Đồng, Đà Lạt', N'Đang hợp tác'),
-    ('NCC0000016', N'Buôn Ma Thuột Syrup House 2', '0817896471', 'contact16@supplier.vn', N'68 Trần Hưng Đạo, Buôn Ma Thuột', N'Đang hợp tác'),
-    ('NCC0000017', 'Nha Trang Tea Farm 2', '0759401199', 'contact17@supplier.vn', N'123 Nguyễn Tất Thành, Nha Trang', N'Đang hợp tác'),
-    ('NCC0000018', N'Quy Nhơn Ice Factory 2', '0873534128', 'contact18@supplier.vn', N'161 Nguyễn Tất Thành, Quy Nhơn', N'Đang hợp tác'),
-    ('NCC0000019', N'Cần Thơ Equipment Care 2', '0860407340', 'contact19@supplier.vn', N'119 Điện Biên Phủ, Cần Thơ', N'Đang hợp tác'),
-    ('NCC0000020', N'Bình Dương Organic Farm 2', '0769967676', 'contact20@supplier.vn', N'71 Hai Bà Trưng, Bình Dương', N'Đang hợp tác');
-GO
-INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, Email, DiaChi, TrangThai) VALUES
-    ('NCC0000021', N'Huế Coffee Supply 3', '0759038700', 'contact21@supplier.vn', N'129 Hai Bà Trưng, Huế', N'Đang hợp tác'),
-    ('NCC0000022', N'Đà Nẵng Milk & Dairy 3', '0336468984', 'contact22@supplier.vn', N'24 Tố Hữu, Đà Nẵng', N'Đang hợp tác'),
-    ('NCC0000023', 'TP.HCM Fruit Hub 3', '0918572252', 'contact23@supplier.vn', N'90 Võ Văn Kiệt, TP.HCM', N'Đang hợp tác'),
-    ('NCC0000024', N'Hà Nội Bakery Source 3', '0893140367', 'contact24@supplier.vn', N'43 Hai Bà Trưng, Hà Nội', N'Đang hợp tác'),
-    ('NCC0000025', N'Đà Lạt Packaging 3', '0955682626', 'contact25@supplier.vn', N'44 Ngô Quyền, Đà Lạt', N'Đang hợp tác'),
-    ('NCC0000026', N'Buôn Ma Thuột Syrup House 3', '0855804273', 'contact26@supplier.vn', N'109 Võ Văn Kiệt, Buôn Ma Thuột', N'Đang hợp tác'),
-    ('NCC0000027', 'Nha Trang Tea Farm 3', '0852274692', 'contact27@supplier.vn', N'20 Ngô Quyền, Nha Trang', N'Ngừng hợp tác'),
-    ('NCC0000028', N'Quy Nhơn Ice Factory 3', '0864019136', 'contact28@supplier.vn', N'154 Nguyễn Huệ, Quy Nhơn', N'Đang hợp tác'),
-    ('NCC0000029', N'Cần Thơ Equipment Care 3', '0752343121', 'contact29@supplier.vn', N'6 Pasteur, Cần Thơ', N'Đang hợp tác'),
-    ('NCC0000030', N'Bình Dương Organic Farm 3', '0365529051', 'contact30@supplier.vn', N'112 Bạch Đằng, Bình Dương', N'Đang hợp tác');
-GO
-INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, Email, DiaChi, TrangThai) VALUES
-    ('NCC0000031', N'Huế Coffee Supply 4', '0865181765', 'contact31@supplier.vn', N'61 Lý Thường Kiệt, Huế', N'Đang hợp tác'),
-    ('NCC0000032', N'Đà Nẵng Milk & Dairy 4', '0789774697', 'contact32@supplier.vn', N'12 Nguyễn Thị Minh Khai, Đà Nẵng', N'Đang hợp tác'),
-    ('NCC0000033', 'TP.HCM Fruit Hub 4', '0362732043', 'contact33@supplier.vn', N'178 Nguyễn Thị Minh Khai, TP.HCM', N'Đang hợp tác'),
-    ('NCC0000034', N'Hà Nội Bakery Source 4', '0952884503', 'contact34@supplier.vn', N'37 Nguyễn Văn Linh, Hà Nội', N'Đang hợp tác'),
-    ('NCC0000035', N'Đà Lạt Packaging 4', '0911267237', 'contact35@supplier.vn', N'156 Hoàng Hoa Thám, Đà Lạt', N'Đang hợp tác'),
-    ('NCC0000036', N'Buôn Ma Thuột Syrup House 4', '0361968116', 'contact36@supplier.vn', N'169 Trường Chinh, Buôn Ma Thuột', N'Đang hợp tác'),
-    ('NCC0000037', 'Nha Trang Tea Farm 4', '0750882459', 'contact37@supplier.vn', N'51 Hùng Vương, Nha Trang', N'Đang hợp tác'),
-    ('NCC0000038', N'Quy Nhơn Ice Factory 4', '0843868501', 'contact38@supplier.vn', N'88 Ngô Quyền, Quy Nhơn', N'Đang hợp tác'),
-    ('NCC0000039', N'Cần Thơ Equipment Care 4', '0756581473', 'contact39@supplier.vn', N'91 Nguyễn Thị Minh Khai, Cần Thơ', N'Ngừng hợp tác'),
-    ('NCC0000040', N'Bình Dương Organic Farm 4', '0802601580', 'contact40@supplier.vn', N'69 Lê Lợi, Bình Dương', N'Đang hợp tác');
-GO
-INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, Email, DiaChi, TrangThai) VALUES
-    ('NCC0000041', N'Huế Coffee Supply 5', '0946970882', 'contact41@supplier.vn', N'196 Bạch Đằng, Huế', N'Đang hợp tác'),
-    ('NCC0000042', N'Đà Nẵng Milk & Dairy 5', '0904164775', 'contact42@supplier.vn', N'62 Lê Lợi, Đà Nẵng', N'Đang hợp tác'),
-    ('NCC0000043', 'TP.HCM Fruit Hub 5', '0983394260', 'contact43@supplier.vn', N'68 Ngô Quyền, TP.HCM', N'Đang hợp tác'),
-    ('NCC0000044', N'Hà Nội Bakery Source 5', '0363560289', 'contact44@supplier.vn', N'44 Hai Bà Trưng, Hà Nội', N'Ngừng hợp tác'),
-    ('NCC0000045', N'Đà Lạt Packaging 5', '0362415804', 'contact45@supplier.vn', N'176 Trần Hưng Đạo, Đà Lạt', N'Đang hợp tác'),
-    ('NCC0000046', N'Buôn Ma Thuột Syrup House 5', '0722520277', 'contact46@supplier.vn', N'184 Lý Thường Kiệt, Buôn Ma Thuột', N'Đang hợp tác'),
-    ('NCC0000047', 'Nha Trang Tea Farm 5', '0921980274', 'contact47@supplier.vn', N'160 Nguyễn Văn Linh, Nha Trang', N'Đang hợp tác'),
-    ('NCC0000048', N'Quy Nhơn Ice Factory 5', '0941870192', 'contact48@supplier.vn', N'84 Trần Hưng Đạo, Quy Nhơn', N'Đang hợp tác'),
-    ('NCC0000049', N'Cần Thơ Equipment Care 5', '0895967649', 'contact49@supplier.vn', N'152 Nguyễn Thị Minh Khai, Cần Thơ', N'Đang hợp tác'),
-    ('NCC0000050', N'Bình Dương Organic Farm 5', '0313676961', 'contact50@supplier.vn', N'55 Lê Lợi, Bình Dương', N'Đang hợp tác');
+-- =============================================
+-- KẾT THÚC FILE SQL
+-- =============================================
+PRINT '';
+PRINT '========================================';
+PRINT '✅ HOÀN THÀNH TẠO DATABASE GIBOR COFFEE';
+PRINT '========================================';
+PRINT '';
+PRINT 'Database đã sẵn sàng sử dụng!';
+PRINT 'Bạn có thể đăng nhập với:';
+PRINT '  - Username: admin';
+PRINT '  - Password: admin123';
 GO
 
-INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
-    ('NL00000001', N'Hạt Arabica Cầu Đất', 'kg', 285000.00, 'NCC0000001', 1, N'Đang sử dụng'),
-    ('NL00000002', N'Hạt Robusta Buôn Ma Thuột', 'kg', 210000.00, 'NCC0000002', 1, N'Đang sử dụng'),
-    ('NL00000003', N'Sữa tươi không đường', N'lít', 38000.00, 'NCC0000003', 1, N'Đang sử dụng'),
-    ('NL00000004', N'Sữa đặc', 'lon', 29000.00, 'NCC0000004', 1, N'Đang sử dụng'),
-    ('NL00000005', 'Whipping cream', N'lít', 92000.00, 'NCC0000005', 1, N'Đang sử dụng'),
-    ('NL00000006', N'Bột matcha Nhật', 'kg', 520000.00, 'NCC0000006', 1, N'Đang sử dụng'),
-    ('NL00000007', N'Bột cacao đen', 'kg', 260000.00, 'NCC0000007', 1, N'Đang sử dụng'),
-    ('NL00000008', 'Siro vanilla', 'chai', 145000.00, 'NCC0000008', 1, N'Đang sử dụng'),
-    ('NL00000009', 'Siro caramel', 'chai', 145000.00, 'NCC0000009', 1, N'Đang sử dụng'),
-    ('NL00000010', 'Siro hazelnut', 'chai', 155000.00, 'NCC0000010', 1, N'Đang sử dụng');
-GO
-INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
-    ('NL00000011', N'Trà ô long', 'kg', 310000.00, 'NCC0000011', 1, N'Đang sử dụng'),
-    ('NL00000012', N'Trà Assam', 'kg', 260000.00, 'NCC0000012', 1, N'Đang sử dụng'),
-    ('NL00000013', N'Hồng trà', 'kg', 230000.00, 'NCC0000013', 1, N'Đang sử dụng'),
-    ('NL00000014', N'Mật ong', 'chai', 165000.00, 'NCC0000014', 1, N'Đang sử dụng'),
-    ('NL00000015', N'Cam vàng', 'kg', 58000.00, 'NCC0000015', 1, N'Đang sử dụng'),
-    ('NL00000016', N'Đào ngâm', N'hộp', 96000.00, 'NCC0000016', 1, N'Đang sử dụng'),
-    ('NL00000017', N'Vải ngâm', N'hộp', 99000.00, 'NCC0000017', 1, N'Đang sử dụng'),
-    ('NL00000018', N'Sả cây', 'kg', 32000.00, 'NCC0000018', 1, N'Đang sử dụng'),
-    ('NL00000019', N'Chanh vàng', 'kg', 67000.00, 'NCC0000019', 1, N'Đang sử dụng'),
-    ('NL00000020', N'Dâu tây đông lạnh', 'kg', 118000.00, 'NCC0000020', 1, N'Đang sử dụng');
-GO
-INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
-    ('NL00000021', 'Kiwi xanh', 'kg', 86000.00, 'NCC0000021', 1, N'Đang sử dụng'),
-    ('NL00000022', N'Việt quất đông lạnh', 'kg', 194000.00, 'NCC0000022', 1, N'Đang sử dụng'),
-    ('NL00000023', N'Sữa chua không đường', N'hộp', 18000.00, 'NCC0000023', 1, N'Đang sử dụng'),
-    ('NL00000024', 'Granola', 'kg', 175000.00, 'NCC0000024', 1, N'Đang sử dụng'),
-    ('NL00000025', N'Bánh quy Oreo', N'gói', 42000.00, 'NCC0000025', 1, N'Đang sử dụng'),
-    ('NL00000026', N'Bột frappe', 'kg', 150000.00, 'NCC0000026', 1, N'Đang sử dụng'),
-    ('NL00000027', N'Trân châu đen', 'kg', 125000.00, 'NCC0000027', 1, N'Đang sử dụng'),
-    ('NL00000028', N'Trân châu trắng', 'kg', 132000.00, 'NCC0000028', 1, N'Đang sử dụng'),
-    ('NL00000029', N'Thạch cà phê', 'kg', 118000.00, 'NCC0000029', 1, N'Đang sử dụng'),
-    ('NL00000030', N'Nha đam sơ chế', 'kg', 92000.00, 'NCC0000030', 1, N'Đang sử dụng');
-GO
-INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
-    ('NL00000031', N'Phô mai kem', 'kg', 210000.00, 'NCC0000031', 1, N'Đang sử dụng'),
-    ('NL00000032', N'Muối biển mịn', 'kg', 24000.00, 'NCC0000032', 1, N'Đang sử dụng'),
-    ('NL00000033', N'Bơ lạt', 'kg', 185000.00, 'NCC0000033', 1, N'Đang sử dụng'),
-    ('NL00000034', N'Bột mì số 11', 'kg', 22500.00, 'NCC0000034', 1, N'Đang sử dụng'),
-    ('NL00000035', N'Men nở', N'gói', 28000.00, 'NCC0000035', 1, N'Ngưng sử dụng'),
-    ('NL00000036', N'Trứng gà', N'vỉ', 38000.00, 'NCC0000036', 1, N'Đang sử dụng'),
-    ('NL00000037', N'Chà bông gà', 'kg', 210000.00, 'NCC0000037', 1, N'Đang sử dụng'),
-    ('NL00000038', N'Phô mai lát', N'gói', 86000.00, 'NCC0000038', 1, N'Đang sử dụng'),
-    ('NL00000039', N'Ức gà sơ chế', 'kg', 132000.00, 'NCC0000039', 1, N'Đang sử dụng'),
-    ('NL00000040', N'Xà lách romaine', 'kg', 76000.00, 'NCC0000040', 1, N'Đang sử dụng');
-GO
-INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
-    ('NL00000041', N'Cà rốt', 'kg', 24000.00, 'NCC0000041', 1, N'Đang sử dụng'),
-    ('NL00000042', N'Nước soda', N'thùng', 168000.00, 'NCC0000042', 1, N'Đang sử dụng'),
-    ('NL00000043', N'Ly giấy 500ml', N'cây', 92000.00, 'NCC0000043', 0, N'Đang sử dụng'),
-    ('NL00000044', N'Nắp ly 500ml', N'cây', 54000.00, 'NCC0000044', 0, N'Đang sử dụng'),
-    ('NL00000045', N'Ống hút giấy', N'hộp', 46000.00, 'NCC0000045', 1, N'Đang sử dụng'),
-    ('NL00000046', N'Túi giao hàng', N'xấp', 68000.00, 'NCC0000046', 1, N'Đang sử dụng'),
-    ('NL00000047', N'Tem nhãn thương hiệu', N'cuộn', 35000.00, 'NCC0000047', 0, N'Ngưng sử dụng'),
-    ('NL00000048', N'Hộp quà carton', N'thùng', 128000.00, 'NCC0000048', 1, N'Đang sử dụng'),
-    ('NL00000049', N'Bình cold brew 500ml', N'thùng', 245000.00, 'NCC0000049', 1, N'Đang sử dụng'),
-    ('NL00000050', 'Decaf blend', 'kg', 315000.00, 'NCC0000050', 1, N'Đang sử dụng');
-GO
-
-INSERT INTO dbo.TonKhoNguyenLieu (MaChiNhanh, MaNguyenLieu, SoLuongTon, MucCanhBao) VALUES
-    ('CN00000001', 'NL00000001', 131.55, 19.73),
-    ('CN00000001', 'NL00000002', 68.25, 10.24),
-    ('CN00000001', 'NL00000003', 129.48, 19.42),
-    ('CN00000001', 'NL00000011', 148.88, 22.33),
-    ('CN00000001', 'NL00000043', 147.40, 22.11),
-    ('CN00000002', 'NL00000001', 110.55, 16.58),
-    ('CN00000002', 'NL00000002', 26.57, 5),
-    ('CN00000002', 'NL00000003', 105.24, 15.79),
-    ('CN00000002', 'NL00000011', 125.84, 18.88),
-    ('CN00000002', 'NL00000043', 31.03, 5);
-GO
-INSERT INTO dbo.TonKhoNguyenLieu (MaChiNhanh, MaNguyenLieu, SoLuongTon, MucCanhBao) VALUES
-    ('CN00000003', 'NL00000001', 123.61, 18.54),
-    ('CN00000003', 'NL00000002', 22.02, 5),
-    ('CN00000003', 'NL00000003', 87.21, 13.08),
-    ('CN00000003', 'NL00000011', 98.43, 14.76),
-    ('CN00000003', 'NL00000043', 89.36, 13.40),
-    ('CN00000004', 'NL00000001', 77.95, 11.69),
-    ('CN00000004', 'NL00000002', 162.65, 24.40),
-    ('CN00000004', 'NL00000003', 93.56, 14.03),
-    ('CN00000004', 'NL00000011', 44.48, 6.67),
-    ('CN00000004', 'NL00000043', 48.18, 7.23);
-GO
-INSERT INTO dbo.TonKhoNguyenLieu (MaChiNhanh, MaNguyenLieu, SoLuongTon, MucCanhBao) VALUES
-    ('CN00000005', 'NL00000001', 103.48, 15.52),
-    ('CN00000005', 'NL00000002', 124.07, 18.61),
-    ('CN00000005', 'NL00000003', 118.55, 17.78),
-    ('CN00000005', 'NL00000011', 167.14, 25.07),
-    ('CN00000005', 'NL00000043', 143.94, 21.59),
-    ('CN00000006', 'NL00000001', 94.38, 14.16),
-    ('CN00000006', 'NL00000002', 152.12, 22.82),
-    ('CN00000006', 'NL00000003', 114.80, 17.22),
-    ('CN00000006', 'NL00000011', 71.57, 10.74),
-    ('CN00000006', 'NL00000043', 59.28, 8.89);
-GO
-INSERT INTO dbo.TonKhoNguyenLieu (MaChiNhanh, MaNguyenLieu, SoLuongTon, MucCanhBao) VALUES
-    ('CN00000007', 'NL00000001', 169.54, 25.43),
-    ('CN00000007', 'NL00000002', 64.63, 9.69),
-    ('CN00000007', 'NL00000003', 92.13, 13.82),
-    ('CN00000007', 'NL00000011', 140.08, 21.01),
-    ('CN00000007', 'NL00000043', 111.18, 16.68),
-    ('CN00000008', 'NL00000001', 126.91, 19.04),
-    ('CN00000008', 'NL00000002', 73.82, 11.07),
-    ('CN00000008', 'NL00000003', 99.09, 14.86),
-    ('CN00000008', 'NL00000011', 72.00, 10.80),
-    ('CN00000008', 'NL00000043', 98.01, 14.70);
-GO
-INSERT INTO dbo.TonKhoNguyenLieu (MaChiNhanh, MaNguyenLieu, SoLuongTon, MucCanhBao) VALUES
-    ('CN00000009', 'NL00000001', 76.77, 11.52),
-    ('CN00000009', 'NL00000002', 61.34, 9.20),
-    ('CN00000009', 'NL00000003', 64.75, 9.71),
-    ('CN00000009', 'NL00000011', 115.38, 17.31),
-    ('CN00000009', 'NL00000043', 160.82, 24.12),
-    ('CN00000010', 'NL00000001', 108.93, 16.34),
-    ('CN00000010', 'NL00000002', 102.66, 15.40),
-    ('CN00000010', 'NL00000003', 50.57, 7.59),
-    ('CN00000010', 'NL00000011', 58.62, 8.79),
-    ('CN00000010', 'NL00000043', 85.03, 12.75);
-GO
-
-INSERT INTO dbo.CongThucPhaChe (MaCongThuc, MaBienThe, MaNguyenLieu, SoLuongSuDung) VALUES
-    ('CT00000001', 'BT00000001', 'NL00000001', 0.01),
-    ('CT00000001', 'BT00000001', 'NL00000002', 0.01),
-    ('CT00000001', 'BT00000001', 'NL00000043', 1.00),
-    ('CT00000001', 'BT00000001', 'NL00000044', 1.00),
-    ('CT00000001', 'BT00000001', 'NL00000047', 1.00),
-    ('CT00000002', 'BT00000002', 'NL00000002', 0.02),
-    ('CT00000002', 'BT00000002', 'NL00000004', 0.04),
-    ('CT00000002', 'BT00000002', 'NL00000043', 1.00),
-    ('CT00000002', 'BT00000002', 'NL00000044', 1.00),
-    ('CT00000002', 'BT00000002', 'NL00000047', 1.00);
-GO
-INSERT INTO dbo.CongThucPhaChe (MaCongThuc, MaBienThe, MaNguyenLieu, SoLuongSuDung) VALUES
-    ('CT00000003', 'BT00000003', 'NL00000001', 0.02),
-    ('CT00000003', 'BT00000003', 'NL00000015', 0.08),
-    ('CT00000003', 'BT00000003', 'NL00000019', 0.01),
-    ('CT00000003', 'BT00000003', 'NL00000043', 1.00),
-    ('CT00000003', 'BT00000003', 'NL00000044', 1.00),
-    ('CT00000004', 'BT00000004', 'NL00000001', 0.02),
-    ('CT00000004', 'BT00000004', 'NL00000007', 0.02),
-    ('CT00000004', 'BT00000004', 'NL00000009', 0.01),
-    ('CT00000004', 'BT00000004', 'NL00000026', 0.02),
-    ('CT00000004', 'BT00000004', 'NL00000043', 1.00);
-GO
-INSERT INTO dbo.CongThucPhaChe (MaCongThuc, MaBienThe, MaNguyenLieu, SoLuongSuDung) VALUES
-    ('CT00000005', 'BT00000005', 'NL00000001', 0.02),
-    ('CT00000005', 'BT00000005', 'NL00000043', 1.00),
-    ('CT00000005', 'BT00000005', 'NL00000044', 1.00),
-    ('CT00000005', 'BT00000005', 'NL00000045', 1.00),
-    ('CT00000005', 'BT00000005', 'NL00000047', 1.00),
-    ('CT00000006', 'BT00000006', 'NL00000013', 0.01),
-    ('CT00000006', 'BT00000006', 'NL00000016', 0.05),
-    ('CT00000006', 'BT00000006', 'NL00000015', 0.03),
-    ('CT00000006', 'BT00000006', 'NL00000018', 0.01),
-    ('CT00000006', 'BT00000006', 'NL00000043', 1.00);
-GO
-INSERT INTO dbo.CongThucPhaChe (MaCongThuc, MaBienThe, MaNguyenLieu, SoLuongSuDung) VALUES
-    ('CT00000007', 'BT00000007', 'NL00000012', 0.01),
-    ('CT00000007', 'BT00000007', 'NL00000003', 0.18),
-    ('CT00000007', 'BT00000007', 'NL00000027', 0.04),
-    ('CT00000007', 'BT00000007', 'NL00000043', 1.00),
-    ('CT00000007', 'BT00000007', 'NL00000044', 1.00),
-    ('CT00000008', 'BT00000008', 'NL00000011', 0.01),
-    ('CT00000008', 'BT00000008', 'NL00000005', 0.04),
-    ('CT00000008', 'BT00000008', 'NL00000031', 0.01),
-    ('CT00000008', 'BT00000008', 'NL00000043', 1.00),
-    ('CT00000008', 'BT00000008', 'NL00000044', 1.00);
-GO
-INSERT INTO dbo.CongThucPhaChe (MaCongThuc, MaBienThe, MaNguyenLieu, SoLuongSuDung) VALUES
-    ('CT00000009', 'BT00000009', 'NL00000013', 0.01),
-    ('CT00000009', 'BT00000009', 'NL00000014', 0.02),
-    ('CT00000009', 'BT00000009', 'NL00000019', 0.01),
-    ('CT00000009', 'BT00000009', 'NL00000043', 1.00),
-    ('CT00000009', 'BT00000009', 'NL00000044', 1.00),
-    ('CT00000010', 'BT00000010', 'NL00000006', 0.01),
-    ('CT00000010', 'BT00000010', 'NL00000003', 0.20),
-    ('CT00000010', 'BT00000010', 'NL00000008', 0.01),
-    ('CT00000010', 'BT00000010', 'NL00000043', 1.00),
-    ('CT00000010', 'BT00000010', 'NL00000044', 1.00);
-GO
-
-INSERT INTO dbo.LichSuKho (LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, ThoiGian, GhiChu) VALUES
-    ('LK00000001', 'CN00000001', 'NL00000001', N'Nhập', 8.89, '2026-03-04T07:09:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000002', 'CN00000001', 'NL00000002', N'Xuất', 2.67, '2026-03-07T08:18:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000003', 'CN00000001', 'NL00000003', N'Hao hụt', 9.46, '2026-03-10T09:27:00', N'Điều chỉnh hao hụt do bảo quản'),
-    ('LK00000004', 'CN00000001', 'NL00000011', N'Nhập', 3.29, '2026-03-13T10:36:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000005', 'CN00000001', 'NL00000043', N'Xuất', 10.24, '2026-03-16T11:45:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000006', 'CN00000002', 'NL00000001', N'Nhập', 11.91, '2026-03-19T12:54:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000007', 'CN00000002', 'NL00000002', N'Xuất', 7.62, '2026-03-22T13:03:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000008', 'CN00000002', 'NL00000003', N'Nhập', 11.48, '2026-03-25T14:12:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000009', 'CN00000002', 'NL00000011', N'Hết hạn', 17.68, '2026-03-01T15:21:00', N'Thu hồi lô nguyên liệu quá hạn'),
-    ('LK00000010', 'CN00000002', 'NL00000043', N'Xuất', 6.14, '2026-03-04T16:30:00', N'Xuất dùng cho quầy pha chế trong ngày');
-GO
-INSERT INTO dbo.LichSuKho (LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, ThoiGian, GhiChu) VALUES
-    ('LK00000011', 'CN00000003', 'NL00000001', N'Nhập', 6.03, '2026-03-07T17:39:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000012', 'CN00000003', 'NL00000002', N'Xuất', 16.02, '2026-03-10T06:48:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000013', 'CN00000003', 'NL00000003', N'Hao hụt', 10.80, '2026-03-13T07:57:00', N'Điều chỉnh hao hụt do bảo quản'),
-    ('LK00000014', 'CN00000003', 'NL00000011', N'Nhập', 17.71, '2026-03-16T08:06:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000015', 'CN00000003', 'NL00000043', N'Xuất', 13.45, '2026-03-19T09:15:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000016', 'CN00000004', 'NL00000001', N'Nhập', 15.41, '2026-03-22T10:24:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000017', 'CN00000004', 'NL00000002', N'Xuất', 7.34, '2026-03-25T11:33:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000018', 'CN00000004', 'NL00000003', N'Nhập', 16.67, '2026-03-01T12:42:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000019', 'CN00000004', 'NL00000011', N'Hết hạn', 12.57, '2026-03-04T13:51:00', N'Thu hồi lô nguyên liệu quá hạn'),
-    ('LK00000020', 'CN00000004', 'NL00000043', N'Xuất', 17.34, '2026-03-07T14:00:00', N'Xuất dùng cho quầy pha chế trong ngày');
-GO
-INSERT INTO dbo.LichSuKho (LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, ThoiGian, GhiChu) VALUES
-    ('LK00000021', 'CN00000005', 'NL00000001', N'Nhập', 22.67, '2026-03-10T15:09:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000022', 'CN00000005', 'NL00000002', N'Xuất', 12.70, '2026-03-13T16:18:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000023', 'CN00000005', 'NL00000003', N'Hao hụt', 8.62, '2026-03-16T17:27:00', N'Điều chỉnh hao hụt do bảo quản'),
-    ('LK00000024', 'CN00000005', 'NL00000011', N'Nhập', 14.57, '2026-03-19T06:36:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000025', 'CN00000005', 'NL00000043', N'Xuất', 3.70, '2026-03-22T07:45:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000026', 'CN00000006', 'NL00000001', N'Nhập', 23.74, '2026-04-25T08:54:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000027', 'CN00000006', 'NL00000002', N'Xuất', 24.72, '2026-04-01T09:03:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000028', 'CN00000006', 'NL00000003', N'Nhập', 8.88, '2026-04-04T10:12:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000029', 'CN00000006', 'NL00000011', N'Hết hạn', 24.13, '2026-04-07T11:21:00', N'Thu hồi lô nguyên liệu quá hạn'),
-    ('LK00000030', 'CN00000006', 'NL00000043', N'Xuất', 17.88, '2026-04-10T12:30:00', N'Xuất dùng cho quầy pha chế trong ngày');
-GO
-INSERT INTO dbo.LichSuKho (LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, ThoiGian, GhiChu) VALUES
-    ('LK00000031', 'CN00000007', 'NL00000001', N'Nhập', 12.51, '2026-04-13T13:39:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000032', 'CN00000007', 'NL00000002', N'Xuất', 8.95, '2026-04-16T14:48:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000033', 'CN00000007', 'NL00000003', N'Hao hụt', 24.99, '2026-04-19T15:57:00', N'Điều chỉnh hao hụt do bảo quản'),
-    ('LK00000034', 'CN00000007', 'NL00000011', N'Nhập', 21.63, '2026-04-22T16:06:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000035', 'CN00000007', 'NL00000043', N'Xuất', 4.45, '2026-04-25T17:15:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000036', 'CN00000008', 'NL00000001', N'Nhập', 10.77, '2026-04-01T06:24:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000037', 'CN00000008', 'NL00000002', N'Xuất', 10.26, '2026-04-04T07:33:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000038', 'CN00000008', 'NL00000003', N'Nhập', 8.81, '2026-04-07T08:42:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000039', 'CN00000008', 'NL00000011', N'Hết hạn', 18.08, '2026-04-10T09:51:00', N'Thu hồi lô nguyên liệu quá hạn'),
-    ('LK00000040', 'CN00000008', 'NL00000043', N'Xuất', 2.50, '2026-04-13T10:00:00', N'Xuất dùng cho quầy pha chế trong ngày');
-GO
-INSERT INTO dbo.LichSuKho (LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, ThoiGian, GhiChu) VALUES
-    ('LK00000041', 'CN00000009', 'NL00000001', N'Nhập', 21.09, '2026-04-16T11:09:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000042', 'CN00000009', 'NL00000002', N'Xuất', 11.10, '2026-04-19T12:18:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000043', 'CN00000009', 'NL00000003', N'Hao hụt', 2.19, '2026-04-22T13:27:00', N'Điều chỉnh hao hụt do bảo quản'),
-    ('LK00000044', 'CN00000009', 'NL00000011', N'Nhập', 21.90, '2026-04-25T14:36:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000045', 'CN00000009', 'NL00000043', N'Xuất', 19.90, '2026-04-01T15:45:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000046', 'CN00000010', 'NL00000001', N'Nhập', 24.39, '2026-04-04T16:54:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000047', 'CN00000010', 'NL00000002', N'Xuất', 22.94, '2026-04-07T17:03:00', N'Xuất dùng cho quầy pha chế trong ngày'),
-    ('LK00000048', 'CN00000010', 'NL00000003', N'Nhập', 19.14, '2026-04-10T06:12:00', N'Nhập hàng theo phiếu NCC định kỳ'),
-    ('LK00000049', 'CN00000010', 'NL00000011', N'Hết hạn', 21.16, '2026-04-13T07:21:00', N'Thu hồi lô nguyên liệu quá hạn'),
-    ('LK00000050', 'CN00000010', 'NL00000043', N'Xuất', 22.77, '2026-04-16T08:30:00', N'Xuất dùng cho quầy pha chế trong ngày');
-GO
-
-INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
-    ('KH0001', N'Đặng Quốc Phong', '0973089925', 120),
-    ('KH0002', N'Đỗ Khánh Nhi', '0335652586', 50),
-    ('KH0003', N'Ngô Văn Bình', '0908004482', 50),
-    ('KH0004', N'Hoàng Thu My', '0779865458', 820),
-    ('KH0005', N'Hồ Quốc Khánh', '0758942178', 20),
-    ('KH0006', N'Đỗ Quỳnh Mai', '0892432795', 180),
-    ('KH0007', N'Võ Công Quân', '0836540265', 600),
-    ('KH0008', N'Huỳnh Mai Quỳnh', '0858755000', 20),
-    ('KH0009', N'Huỳnh Gia Nam', '0957985905', 250),
-    ('KH0010', N'Hoàng Diễm Hương', '0703471527', 20);
-GO
-INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
-    ('KH0011', N'Phạm Hữu Đức', '0390502794', 820),
-    ('KH0012', N'Huỳnh Ngọc Quỳnh', '0990232106', 180),
-    ('KH0013', N'Ngô Minh Đức', '0923513701', 450),
-    ('KH0014', N'Phạm Khánh Hương', '0837333543', 50),
-    ('KH0015', N'Hồ Xuân Quân', '0885199362', 450),
-    ('KH0016', N'Bùi Diễm Diễm', '0963083727', 250),
-    ('KH0017', N'Dương Quốc Khánh', '0844735895', 250),
-    ('KH0018', N'Phạm Bảo Hà', '0921585546', 250),
-    ('KH0019', N'Hoàng Văn Sơn', '0893103304', 450),
-    ('KH0020', N'Lê Diễm Anh', '0788930456', 320);
-GO
-INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
-    ('KH0021', N'Nguyễn Công Khánh', '0961045700', 20),
-    ('KH0022', N'Hồ Thanh Trâm', '0733876400', 250),
-    ('KH0023', N'Dương Anh Cường', '0954247457', 600),
-    ('KH0024', N'Dương Thị Thảo', '0988269682', 600),
-    ('KH0025', N'Hoàng Anh Phong', '0855465150', 0),
-    ('KH0026', N'Võ Bảo Hà', '0369583757', 250),
-    ('KH0027', N'Nguyễn Đức Phong', '0883940940', 450),
-    ('KH0028', N'Trần Ngọc My', '0927321124', 180),
-    ('KH0029', N'Võ Hữu Thành', '0338658617', 450),
-    ('KH0030', N'Đỗ Thị Giang', '0816297533', 0);
-GO
-INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
-    ('KH0031', N'Lê Xuân Khánh', '0395265438', 50),
-    ('KH0032', N'Trần Thu Diễm', '0773932360', 0),
-    ('KH0033', N'Đặng Thanh Trung', '0812510327', 120),
-    ('KH0034', N'Bùi Quỳnh Hiền', '0961934487', 20),
-    ('KH0035', N'Ngô Công Long', '0366890827', 180),
-    ('KH0036', N'Võ Khánh Lan', '0755766169', 450),
-    ('KH0037', N'Dương Xuân Minh', '0832713008', 450),
-    ('KH0038', N'Hoàng Quỳnh Trang', '0351484043', 120),
-    ('KH0039', N'Nguyễn Xuân Cường', '0309369750', 180),
-    ('KH0040', N'Ngô Thu Trâm', '0845617282', 600);
-GO
-INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
-    ('KH0041', N'Phạm Đức Vinh', '0700344303', 180),
-    ('KH0042', N'Trần Thanh Hiền', '0778777447', 820),
-    ('KH0043', N'Lê Công Bình', '0819944139', 450),
-    ('KH0044', N'Lê Thị Ngân', '0846321751', 250),
-    ('KH0045', N'Võ Xuân Phong', '0861115319', 250),
-    ('KH0046', N'Hoàng Thị Hiền', '0393616654', 120),
-    ('KH0047', N'Hoàng Đức Nam', '0831348220', 320),
-    ('KH0048', N'Trần Thu Hương', '0942704903', 450),
-    ('KH0049', N'Ngô Xuân Vinh', '0851818612', 50),
-    ('KH0050', N'Ngô Thu Ngân', '0804968688', 50);
-GO
-
--- Tạm thời disable trigger để INSERT dữ liệu test
-DISABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
-GO
-
--- Tạm thời disable trigger để INSERT dữ liệu test
-DISABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
-GO
-
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0001', 'CN00000001', 'NV00000001', 'KH0001', 78000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-03T08:07:00'),
-    ('DH0002', 'CN00000002', 'NV00000002', 'KH0002', 135000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-05T09:14:00'),
-    ('DH0003', 'CN00000003', 'NV00000003', 'KH0003', 204000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-07T10:21:00'),
-    ('DH0004', 'CN00000004', 'NV00000004', 'KH0004', 35000.00, 0.00, 'QR', N'Hoàn tất', '2026-03-09T11:28:00'),
-    ('DH0005', 'CN00000005', 'NV00000005', 'KH0005', 82000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-11T12:35:00'),
-    ('DH0006', 'CN00000006', 'NV00000006', NULL, 141000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-13T13:42:00'),
-    ('DH0007', 'CN00000007', 'NV00000007', 'KH0007', 196000.00, 15000.00, N'Thẻ', N'Hoàn tất', '2026-03-15T14:49:00'),
-    ('DH0008', 'CN00000008', 'NV00000008', 'KH0008', 55000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-17T15:56:00'),
-    ('DH0009', 'CN00000009', 'NV00000009', 'KH0009', 122000.00, 0.00, 'QR', N'Hủy', '2026-03-19T16:03:00'),
-    ('DH0010', 'CN00000010', 'NV00000010', 'KH0010', 165000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-21T17:10:00');
-GO
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0011', 'CN00000011', 'NV00000011', 'KH0011', 244000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-23T18:17:00'),
-    ('DH0012', 'CN00000012', 'NV00000012', NULL, 67000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-25T19:24:00'),
-    ('DH0013', 'CN00000013', 'NV00000013', 'KH0013', 118000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-27T07:31:00'),
-    ('DH0014', 'CN00000014', 'NV00000014', 'KH0014', 195000.00, 15000.00, 'QR', N'Hoàn tất', '2026-03-02T08:38:00'),
-    ('DH0015', 'CN00000015', 'NV00000015', 'KH0015', 284000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-04T09:45:00'),
-    ('DH0016', 'CN00000016', 'NV00000016', 'KH0016', 45000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-03-06T10:52:00'),
-    ('DH0017', 'CN00000017', 'NV00000017', 'KH0017', 102000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-08T11:59:00'),
-    ('DH0018', 'CN00000018', 'NV00000018', NULL, 171000.00, 0.00, N'Chuyển khoản', N'Hủy', '2026-03-10T12:06:00'),
-    ('DH0019', 'CN00000019', 'NV00000019', 'KH0019', 196000.00, 0.00, 'QR', N'Hoàn tất', '2026-03-12T13:13:00'),
-    ('DH0020', 'CN00000020', 'NV00000020', 'KH0020', 55000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-14T14:20:00');
-GO
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0021', 'CN00000021', 'NV00000021', 'KH0021', 122000.00, 15000.00, N'Tiền mặt', N'Hoàn tất', '2026-03-16T15:27:00'),
-    ('DH0022', 'CN00000022', 'NV00000022', 'KH0022', 141000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-03-18T16:34:00'),
-    ('DH0023', 'CN00000023', 'NV00000023', 'KH0023', 212000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-03-20T17:41:00'),
-    ('DH0024', 'CN00000024', 'NV00000024', NULL, 59000.00, 0.00, 'QR', N'Hoàn tất', '2026-03-22T18:48:00'),
-    ('DH0025', 'CN00000025', 'NV00000025', 'KH0025', 78000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-03-24T19:55:00'),
-    ('DH0026', 'CN00000026', 'NV00000026', 'KH0026', 135000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-04-26T07:02:00'),
-    ('DH0027', 'CN00000027', 'NV00000027', 'KH0027', 204000.00, 0.00, N'Thẻ', N'Hủy', '2026-04-01T08:09:00'),
-    ('DH0028', 'CN00000028', 'NV00000028', 'KH0028', 49000.00, 15000.00, N'Chuyển khoản', N'Hoàn tất', '2026-04-03T09:16:00'),
-    ('DH0029', 'CN00000029', 'NV00000029', 'KH0029', 110000.00, 0.00, 'QR', N'Hoàn tất', '2026-04-05T10:23:00'),
-    ('DH0030', 'CN00000030', 'NV00000030', NULL, 183000.00, 0.00, N'Ví điện tử', N'Hoàn tất', '2026-04-07T11:30:00');
-GO
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0031', 'CN00000031', 'NV00000031', 'KH0031', 180000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-04-09T12:37:00'),
-    ('DH0032', 'CN00000032', 'NV00000032', 'KH0032', 51000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-04-11T13:44:00'),
-    ('DH0033', 'CN00000033', 'NV00000033', 'KH0033', 114000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-04-13T14:51:00'),
-    ('DH0034', 'CN00000034', 'NV00000034', 'KH0034', 141000.00, 0.00, 'QR', N'Hoàn tất', '2026-04-15T15:58:00'),
-    ('DH0035', 'CN00000035', 'NV00000035', 'KH0035', 212000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-04-17T16:05:00'),
-    ('DH0036', 'CN00000036', 'NV00000036', NULL, 59000.00, 0.00, N'Tiền mặt', N'Hủy', '2026-04-19T17:12:00'),
-    ('DH0037', 'CN00000037', 'NV00000037', 'KH0037', 86000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-04-21T18:19:00'),
-    ('DH0038', 'CN00000038', 'NV00000038', 'KH0038', 147000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-04-23T19:26:00'),
-    ('DH0039', 'CN00000039', 'NV00000039', 'KH0039', 220000.00, 0.00, 'QR', N'Hoàn tất', '2026-04-25T07:33:00'),
-    ('DH0040', 'CN00000040', 'NV00000040', 'KH0040', 44000.00, 10000.00, N'Ví điện tử', N'Hoàn tất', '2026-04-27T08:40:00');
-GO
-INSERT INTO dbo.DonHang (MaDH, MaChiNhanh, MaNV, MaKH, TongTien, GiamGia, PhuongThucThanhToan, TrangThai, NgayTao) VALUES
-    ('DH0041', 'CN00000001', 'NV00000001', 'KH0041', 100000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-04-02T09:47:00'),
-    ('DH0042', 'CN00000002', 'NV00000002', NULL, 168000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-04-04T10:54:00'),
-    ('DH0043', 'CN00000003', 'NV00000003', 'KH0043', 208000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-04-06T11:01:00'),
-    ('DH0044', 'CN00000004', 'NV00000004', 'KH0044', 58000.00, 0.00, 'QR', N'Hoàn tất', '2026-04-08T12:08:00'),
-    ('DH0045', 'CN00000005', 'NV00000005', 'KH0045', 128000.00, 20000.00, N'Ví điện tử', N'Hủy', '2026-04-10T13:15:00'),
-    ('DH0046', 'CN00000006', 'NV00000006', 'KH0046', 96000.00, 0.00, N'Tiền mặt', N'Hoàn tất', '2026-04-12T14:22:00'),
-    ('DH0047', 'CN00000007', 'NV00000007', 'KH0047', 152000.00, 0.00, N'Thẻ', N'Hoàn tất', '2026-04-14T15:29:00'),
-    ('DH0048', 'CN00000008', 'NV00000008', NULL, 44000.00, 0.00, N'Chuyển khoản', N'Hoàn tất', '2026-04-16T16:36:00'),
-    ('DH0049', 'CN00000009', 'NV00000009', 'KH0049', 88000.00, 15000.00, 'QR', N'Hoàn tất', '2026-04-18T17:43:00'),
-    ('DH0050', 'CN00000010', 'NV00000010', 'KH0050', 150000.00, 20000.00, N'Ví điện tử', N'Hoàn tất', '2026-04-20T18:50:00');
-GO
--- Enable lại trigger sau khi INSERT xong
-ENABLE TRIGGER dbo.TRG_DonHang_CapNhatDiem ON dbo.DonHang;
-GO
-
-INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia, GhiChu) VALUES
-    ('CTDH000001', 'DH0001', 'BT00000001', 2, 39000.00, N'Giao trước 10 phút'),
-    ('CTDH000002', 'DH0002', 'BT00000002', 3, 45000.00, N'Giao trước 10 phút'),
-    ('CTDH000003', 'DH0003', 'BT00000003', 4, 51000.00, N'50% đường'),
-    ('CTDH000004', 'DH0004', 'BT00000004', 1, 35000.00, NULL),
-    ('CTDH000005', 'DH0005', 'BT00000005', 2, 41000.00, N'Mang đi'),
-    ('CTDH000006', 'DH0006', 'BT00000006', 3, 47000.00, NULL),
-    ('CTDH000007', 'DH0007', 'BT00000007', 4, 49000.00, N'Giao trước 10 phút'),
-    ('CTDH000008', 'DH0008', 'BT00000008', 1, 55000.00, N'Mang đi'),
-    ('CTDH000009', 'DH0009', 'BT00000009', 2, 61000.00, NULL),
-    ('CTDH000010', 'DH0010', 'BT00000010', 3, 55000.00, N'Không ống hút');
-GO
-INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia, GhiChu) VALUES
-    ('CTDH000011', 'DH0011', 'BT00000011', 4, 61000.00, N'Ít đá'),
-    ('CTDH000012', 'DH0012', 'BT00000012', 1, 67000.00, N'Mang đi'),
-    ('CTDH000013', 'DH0013', 'BT00000013', 2, 59000.00, N'Không ống hút'),
-    ('CTDH000014', 'DH0014', 'BT00000014', 3, 65000.00, N'Ít đá'),
-    ('CTDH000015', 'DH0015', 'BT00000015', 4, 71000.00, NULL),
-    ('CTDH000016', 'DH0016', 'BT00000016', 1, 45000.00, N'Mang đi'),
-    ('CTDH000017', 'DH0017', 'BT00000017', 2, 51000.00, N'50% đường'),
-    ('CTDH000018', 'DH0018', 'BT00000018', 3, 57000.00, N'50% đường'),
-    ('CTDH000019', 'DH0019', 'BT00000019', 4, 49000.00, N'Giao trước 10 phút'),
-    ('CTDH000020', 'DH0020', 'BT00000020', 1, 55000.00, N'Không ống hút');
-GO
-INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia, GhiChu) VALUES
-    ('CTDH000021', 'DH0021', 'BT00000021', 2, 61000.00, N'Mang đi'),
-    ('CTDH000022', 'DH0022', 'BT00000022', 3, 47000.00, N'Không ống hút'),
-    ('CTDH000023', 'DH0023', 'BT00000023', 4, 53000.00, NULL),
-    ('CTDH000024', 'DH0024', 'BT00000024', 1, 59000.00, N'50% đường'),
-    ('CTDH000025', 'DH0025', 'BT00000025', 2, 39000.00, N'Không ống hút'),
-    ('CTDH000026', 'DH0026', 'BT00000026', 3, 45000.00, N'Giao trước 10 phút'),
-    ('CTDH000027', 'DH0027', 'BT00000027', 4, 51000.00, N'Mang đi'),
-    ('CTDH000028', 'DH0028', 'BT00000028', 1, 49000.00, N'50% đường'),
-    ('CTDH000029', 'DH0029', 'BT00000029', 2, 55000.00, N'Không ống hút'),
-    ('CTDH000030', 'DH0030', 'BT00000030', 3, 61000.00, N'Không ống hút');
-GO
-INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia, GhiChu) VALUES
-    ('CTDH000031', 'DH0031', 'BT00000031', 4, 45000.00, N'Mang đi'),
-    ('CTDH000032', 'DH0032', 'BT00000032', 1, 51000.00, N'Giao trước 10 phút'),
-    ('CTDH000033', 'DH0033', 'BT00000033', 2, 57000.00, NULL),
-    ('CTDH000034', 'DH0034', 'BT00000034', 3, 47000.00, N'Giao trước 10 phút'),
-    ('CTDH000035', 'DH0035', 'BT00000035', 4, 53000.00, NULL),
-    ('CTDH000036', 'DH0036', 'BT00000036', 1, 59000.00, N'Ít đá'),
-    ('CTDH000037', 'DH0037', 'BT00000037', 2, 43000.00, N'Không ống hút'),
-    ('CTDH000038', 'DH0038', 'BT00000038', 3, 49000.00, N'Không ống hút'),
-    ('CTDH000039', 'DH0039', 'BT00000039', 4, 55000.00, N'50% đường'),
-    ('CTDH000040', 'DH0040', 'BT00000040', 1, 44000.00, N'Ít đá');
-GO
-INSERT INTO dbo.ChiTietDonHang (MaCTDH, MaDH, MaBienThe, SoLuong, DonGia, GhiChu) VALUES
-    ('CTDH000041', 'DH0041', 'BT00000041', 2, 50000.00, N'Không ống hút'),
-    ('CTDH000042', 'DH0042', 'BT00000042', 3, 56000.00, NULL),
-    ('CTDH000043', 'DH0043', 'BT00000043', 4, 52000.00, N'Mang đi'),
-    ('CTDH000044', 'DH0044', 'BT00000044', 1, 58000.00, NULL),
-    ('CTDH000045', 'DH0045', 'BT00000045', 2, 64000.00, N'Không ống hút'),
-    ('CTDH000046', 'DH0046', 'BT00000046', 3, 32000.00, N'Không ống hút'),
-    ('CTDH000047', 'DH0047', 'BT00000047', 4, 38000.00, NULL),
-    ('CTDH000048', 'DH0048', 'BT00000048', 1, 44000.00, N'Mang đi'),
-    ('CTDH000049', 'DH0049', 'BT00000049', 2, 44000.00, N'Ít đá'),
-    ('CTDH000050', 'DH0050', 'BT00000050', 3, 50000.00, N'Không ống hút');
-GO
-
-ENABLE TRIGGER ALL ON DATABASE;
-GO
-
-/* ========================= 14. KIỂM THỬ NGHIỆP VỤ ========================= */
-EXEC dbo.sp_GhiNhanGiaoDichKho
-    @LogID = 'LOG0000001',
-    @MaChiNhanh = 'CN00000001',
-    @MaNguyenLieu = 'NL00000001',
-    @LoaiGiaoDich = N'Nhập',
-    @SoLuong = 5,
-    @GhiChu = N'Nhập kho đầu ngày';
-GO
-
-EXEC dbo.sp_GhiNhanGiaoDichKho
-    @LogID = 'LOG0000002',
-    @MaChiNhanh = 'CN00000001',
-    @MaNguyenLieu = 'NL00000003',
-    @LoaiGiaoDich = N'Xuất',
-    @SoLuong = 1,
-    @GhiChu = N'Xuất pha chế';
-GO
-
-EXEC dbo.sp_KhoiTaoBangLuong @Thang = 6, @Nam = 2026;
-GO
-
-EXEC dbo.sp_TaoDonHang
-    @MaDH = 'DH00001',
-    @MaChiNhanh = 'CN00000001',
-    @MaNV = 'NV00000002',
-    @MaKH = 'KH0001',
-    @PhuongThucThanhToan = N'QR',
-    @GiamGia = 0,
-    @MaBienThe1 = 'BT00000001',
-    @SoLuong1 = 2,
-    @MaBienThe2 = 'BT00000005',
-    @SoLuong2 = 1;
-GO
-
-EXEC dbo.sp_CanhBaoTonKho;
-GO
-
-/* ========================= 15. TRUY VẤN BÁO CÁO MẪU ========================= */
-SELECT * FROM dbo.vw_MenuChiNhanh WHERE MaChiNhanh = 'CN00000001';
-SELECT * FROM dbo.vw_CanhBaoTonKho ORDER BY MaChiNhanh, MaNguyenLieu;
-SELECT * FROM dbo.vw_BangLuongTongHop ORDER BY Nam, Thang, MaNV;
-SELECT * FROM dbo.DuLieuHeThong ORDER BY ThoiGian DESC;
-SELECT * FROM dbo.DonHang;
-SELECT * FROM dbo.ChiTietDonHang;
-SELECT * FROM dbo.PhatDiMuon;
-GO
-
-/* ========================= 16. SAO LƯU - PHỤC HỒI ========================= */
-/*
--- A. FULL BACKUP
-BACKUP DATABASE QuanLyChuoiCaPhe
-TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
-WITH FORMAT, INIT, NAME = N'Full Backup QuanLyChuoiCaPhe';
-
--- B. DIFFERENTIAL BACKUP
-BACKUP DATABASE QuanLyChuoiCaPhe
-TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_DIFF.bak'
-WITH DIFFERENTIAL, INIT, NAME = N'Differential Backup QuanLyChuoiCaPhe';
-
--- C. LOG BACKUP
-BACKUP LOG QuanLyChuoiCaPhe
-TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_LOG.trn'
-WITH INIT, NAME = N'Log Backup QuanLyChuoiCaPhe';
-
--- D. PHỤC HỒI CSDL
-USE master;
-ALTER DATABASE QuanLyChuoiCaPhe SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-RESTORE DATABASE QuanLyChuoiCaPhe
-FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
-WITH REPLACE, RECOVERY;
-ALTER DATABASE QuanLyChuoiCaPhe SET MULTI_USER;
-*/
-GO
-
-/* ========================= 17. QUẢN TRỊ NGƯỜI DÙNG - PHÂN QUYỀN ========================= */
-/*
-USE master;
-IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'qlcf_admin')
-    CREATE LOGIN qlcf_admin WITH PASSWORD = 'StrongAdmin@123';
-IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'qlcf_staff')
-    CREATE LOGIN qlcf_staff WITH PASSWORD = 'StrongStaff@123';
-GO
-
-USE QuanLyChuoiCaPhe;
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_admin')
-    CREATE USER qlcf_admin FOR LOGIN qlcf_admin;
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_staff')
-    CREATE USER qlcf_staff FOR LOGIN qlcf_staff;
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_quanly')
-    CREATE ROLE role_quanly;
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_nhanvien')
-    CREATE ROLE role_nhanvien;
-GO
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DonHang TO role_quanly;
-GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ChiTietDonHang TO role_quanly;
-GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_quanly;
-GRANT SELECT ON dbo.vw_BangLuongTongHop TO role_quanly;
-GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_quanly;
-GRANT EXECUTE ON dbo.sp_GhiNhanGiaoDichKho TO role_quanly;
-
-GRANT SELECT, INSERT ON dbo.DonHang TO role_nhanvien;
-GRANT SELECT, INSERT ON dbo.ChiTietDonHang TO role_nhanvien;
-GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_nhanvien;
-GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_nhanvien;
-
-ALTER ROLE role_quanly ADD MEMBER qlcf_admin;
-ALTER ROLE role_nhanvien ADD MEMBER qlcf_staff;
-*/
-GO

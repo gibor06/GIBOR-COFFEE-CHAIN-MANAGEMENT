@@ -72,7 +72,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                await _bangLuongService.KhoiTaoBangLuongAsync(model);
+                var chiNhanhFilter = GetChiNhanhFilter();
+                await _bangLuongService.KhoiTaoBangLuongAsync(model, chiNhanhFilter);
                 TempData["Success"] = $"Khởi tạo bảng lương tháng {model.Thang}/{model.Nam} thành công!";
                 return RedirectToAction(nameof(Index), new { thang = model.Thang, nam = model.Nam });
             }
@@ -96,6 +97,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 if (bangLuong == null)
                 {
                     return Json(new { success = false, message = "Không tìm thấy bảng lương!" });
+                }
+
+                if (!CanAccessChiNhanh(bangLuong.ThongTinNhanVien.MaChiNhanh))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền thao tác bảng lương của chi nhánh khác!" });
                 }
 
                 if (bangLuong.TrangThai == "Đã thanh toán")
@@ -129,6 +135,12 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         {
             try
             {
+                var employee = await _context.ThongTinNhanViens.FindAsync(maNV);
+                if (employee == null || !CanAccessChiNhanh(employee.MaChiNhanh))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền thanh toán lương của chi nhánh khác!" });
+                }
+
                 var bangLuong = await _context.BangLuongs.FindAsync(maNV, thang, nam);
                 if (bangLuong == null)
                 {

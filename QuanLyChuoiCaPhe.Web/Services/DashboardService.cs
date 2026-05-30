@@ -13,7 +13,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
             _context = context;
         }
 
-        public async Task<DashboardViewModel> GetDashboardDataAsync()
+        public async Task<DashboardViewModel> GetDashboardDataAsync(string? maChiNhanh = null)
         {
             var today = DateTime.Today;
             var currentYear = DateTime.Now.Year;
@@ -21,22 +21,23 @@ namespace QuanLyChuoiCaPhe.Web.Services
 
             var model = new DashboardViewModel
             {
-                TongChiNhanh = await _context.ChiNhanhs.CountAsync(c => c.TrangThai),
-                TongNhanVien = await _context.ThongTinNhanViens.CountAsync(n => n.TrangThai),
-                TongSanPham = await _context.SanPhams.CountAsync(s => s.TrangThai),
-                TongDonHang = await _context.DonHangs.CountAsync(),
+                TongChiNhanh = await _context.ChiNhanhs.CountAsync(c => c.TrangThai && (maChiNhanh == null || c.MaChiNhanh == maChiNhanh)),
+                TongNhanVien = await _context.ThongTinNhanViens.CountAsync(n => n.TrangThai && (maChiNhanh == null || n.MaChiNhanh == maChiNhanh)),
+                TongSanPham = await _context.SanPhams.CountAsync(s => s.TrangThai && (maChiNhanh == null || _context.SanPhamChiNhanhs.Any(spcn => spcn.MaChiNhanh == maChiNhanh && spcn.MaSanPham == s.MaSanPham && spcn.TrangThai))),
+                TongDonHang = await _context.DonHangs.CountAsync(d => maChiNhanh == null || d.MaChiNhanh == maChiNhanh),
                 DoanhThuHomNay = await _context.DonHangs
-                    .Where(d => d.NgayTao.Date == today)
+                    .Where(d => d.NgayTao.Date == today && (maChiNhanh == null || d.MaChiNhanh == maChiNhanh))
                     .SumAsync(d => (decimal?)d.TongTien - d.GiamGia) ?? 0,
-                SoCanhBaoTonKho = await _context.VwCanhBaoTonKhos.CountAsync(),
+                SoCanhBaoTonKho = await _context.VwCanhBaoTonKhos.CountAsync(c => (maChiNhanh == null || c.MaChiNhanh == maChiNhanh) && c.SoLuongTon <= c.MucCanhBao),
                 BangLuongTamTinh = await _context.BangLuongs
-                    .Where(b => b.TrangThai == "Tạm tính")
+                    .Include(b => b.ThongTinNhanVien)
+                    .Where(b => b.TrangThai == "Tạm tính" && (maChiNhanh == null || b.ThongTinNhanVien.MaChiNhanh == maChiNhanh))
                     .SumAsync(b => (decimal?)b.ThucLanh) ?? 0
             };
 
             // Doanh thu 7 ngày gần nhất (liên tục, kể cả ngày không có đơn).
             var revenueByDate = await _context.DonHangs
-                .Where(d => d.NgayTao.Date >= startOfLast7Days && d.NgayTao.Date <= today)
+                .Where(d => d.NgayTao.Date >= startOfLast7Days && d.NgayTao.Date <= today && (maChiNhanh == null || d.MaChiNhanh == maChiNhanh))
                 .GroupBy(d => d.NgayTao.Date)
                 .Select(g => new
                 {
@@ -63,6 +64,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 .AsNoTracking()
                 .Include(d => d.ChiNhanh)
                 .Include(d => d.ThongTinNhanVien)
+                .Where(d => maChiNhanh == null || d.MaChiNhanh == maChiNhanh)
                 .OrderByDescending(d => d.NgayTao)
                 .Take(10)
                 .Select(d => new DonHangGanDay
@@ -79,7 +81,7 @@ namespace QuanLyChuoiCaPhe.Web.Services
             // Doanh thu theo tháng
             model.DoanhThuTheoThang = await _context.DonHangs
                 .AsNoTracking()
-                .Where(d => d.NgayTao.Year == currentYear)
+                .Where(d => d.NgayTao.Year == currentYear && (maChiNhanh == null || d.MaChiNhanh == maChiNhanh))
                 .GroupBy(d => d.NgayTao.Month)
                 .Select(g => new DoanhThuThang
                 {

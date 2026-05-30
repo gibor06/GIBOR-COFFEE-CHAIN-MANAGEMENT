@@ -21,10 +21,20 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            // Nếu đã đăng nhập thì chuyển về Dashboard
-            if (!string.IsNullOrEmpty(_authService.GetCurrentMaTK()))
+            // Nếu đã đăng nhập thì chuyển về trang phù hợp với vai trò
+            var maTK = _authService.GetCurrentMaTK();
+            if (!string.IsNullOrEmpty(maTK))
             {
-                return RedirectToAction("Index", "Dashboard");
+                var vaiTro = _authService.GetCurrentVaiTro();
+                return vaiTro switch
+                {
+                    "ADMIN" => RedirectToAction("Index", "Dashboard"),
+                    "QUAN_LY" => RedirectToAction("Index", "Dashboard"),
+                    "NHAN_VIEN" => RedirectToAction("Menu", "SanPham"),
+                    "KE_TOAN" => RedirectToAction("Index", "BangLuong"),
+                    "KHO" => RedirectToAction("Index", "Kho"),
+                    _ => RedirectToAction("Index", "Dashboard")
+                };
             }
 
             return View();
@@ -52,7 +62,16 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 await _authService.SetSessionAsync(taiKhoan);
                 TempData["Success"] = $"Chào mừng {taiKhoan.TenDangNhap}!";
 
-                return RedirectToAction("Index", "Dashboard");
+                // Redirect theo vai trò để tránh redirect loop
+                return taiKhoan.VaiTro switch
+                {
+                    "ADMIN" => RedirectToAction("Index", "Dashboard"),
+                    "QUAN_LY" => RedirectToAction("Index", "Dashboard"),
+                    "NHAN_VIEN" => RedirectToAction("Menu", "SanPham"),
+                    "KE_TOAN" => RedirectToAction("Index", "BangLuong"),
+                    "KHO" => RedirectToAction("Index", "Kho"),
+                    _ => RedirectToAction("Index", "Dashboard")
+                };
             }
             catch (Exception ex)
             {

@@ -6,7 +6,7 @@ using QuanLyChuoiCaPhe.Web.Services;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
-    [RoleAuthorize("ADMIN", "QUAN_LY", "KE_TOAN")]
+    [RoleAuthorize("ADMIN", "QUAN_LY")]
     public class BaoCaoController : BaseController
     {
         private readonly QuanLyChuoiCaPheContext _context;
@@ -68,22 +68,20 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
                 ViewBag.DoanhThuTheoNgay = doanhThuTheoNgay;
 
-                // Nhật ký hệ thống (Ẩn HeThongTaiKhoan đối với các vai trò không phải ADMIN)
-                var nhatKyQuery = _context.DuLieuHeThongs
-                    .Include(d => d.HeThongTaiKhoan)
-                    .AsQueryable();
-
-                if (CurrentVaiTro != "ADMIN")
+                // Nhật ký hệ thống (Chỉ ADMIN được xem nhật ký hệ thống)
+                if (CurrentVaiTro == "ADMIN")
                 {
-                    nhatKyQuery = nhatKyQuery.Where(d => d.TenBang != "HeThongTaiKhoan");
+                    var nhatKy = await _context.DuLieuHeThongs
+                        .Include(d => d.HeThongTaiKhoan)
+                        .OrderByDescending(d => d.ThoiGian)
+                        .Take(50)
+                        .ToListAsync();
+                    ViewBag.NhatKy = nhatKy;
                 }
-
-                var nhatKy = await nhatKyQuery
-                    .OrderByDescending(d => d.ThoiGian)
-                    .Take(50)
-                    .ToListAsync();
-
-                ViewBag.NhatKy = nhatKy;
+                else
+                {
+                    ViewBag.NhatKy = new List<Models.DuLieuHeThong>();
+                }
 
                 return View();
             }

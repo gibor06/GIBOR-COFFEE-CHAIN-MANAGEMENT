@@ -29,7 +29,32 @@ namespace QuanLyChuoiCaPhe.Web.Filters
             if (_allowedRoles.Length > 0 && !_allowedRoles.Contains(vaiTro))
             {
                 context.HttpContext.Session.SetString("ErrorMessage", "Bạn không có quyền truy cập chức năng này!");
-                context.Result = new RedirectToActionResult("Index", "Dashboard", null);
+                
+                string controller = "Account";
+                string action = "Login";
+                
+                switch (vaiTro)
+                {
+                    case "ADMIN":
+                    case "QUAN_LY":
+                        controller = "Dashboard";
+                        action = "Index";
+                        break;
+                    case "NHAN_VIEN":
+                        controller = "SanPham";
+                        action = "Menu";
+                        break;
+                    case "KE_TOAN":
+                        controller = "BangLuong";
+                        action = "Index";
+                        break;
+                    case "KHO":
+                        controller = "Kho";
+                        action = "Index";
+                        break;
+                }
+                
+                context.Result = new RedirectToActionResult(action, controller, null);
                 return;
             }
         }

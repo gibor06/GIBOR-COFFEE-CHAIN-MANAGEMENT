@@ -141,56 +141,59 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-coffee text-white">
-                    <h5><i class="bi bi-clock-history"></i> Nhật ký Hệ thống (50 gần nhất)</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-sm table-hover">
-                            <thead class="sticky-top bg-light">
-                                <tr>
-                                    <th>Thời gian</th>
-                                    <th>Tài khoản</th>
-                                    <th>Hành động</th>
-                                    <th>Bảng</th>
-                                    <th>SL tác động</th>
-                                    <th>Nội dung</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @{
-                                    var nhatKy = ViewBag.NhatKy as List<DuLieuHeThong>;
-                                }
-                                @if (nhatKy != null && nhatKy.Any())
-                                {
-                                    @foreach (var item in nhatKy)
+    @if (Context.Session.GetString("VaiTro") == "ADMIN")
+    {
+        <div class="row g-3 mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-coffee text-white">
+                        <h5><i class="bi bi-clock-history"></i> Nhật ký Hệ thống (50 gần nhất)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover">
+                                <thead class="sticky-top bg-light">
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Tài khoản</th>
+                                        <th>Hành động</th>
+                                        <th>Bảng</th>
+                                        <th>SL tác động</th>
+                                        <th>Nội dung</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var nhatKy = ViewBag.NhatKy as List<DuLieuHeThong>;
+                                    }
+                                    @if (nhatKy != null && nhatKy.Any())
+                                    {
+                                        @foreach (var item in nhatKy)
+                                        {
+                                            <tr>
+                                                <td>@item.ThoiGian.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                                <td>@item.HeThongTaiKhoan?.TenDangNhap</td>
+                                                <td><span class="badge bg-info">@item.HanhDong</span></td>
+                                                <td>@item.TenBang</td>
+                                                <td>@item.SoLuongTacDong</td>
+                                                <td>@item.NoiDung</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
                                     {
                                         <tr>
-                                            <td>@item.ThoiGian.ToString("dd/MM/yyyy HH:mm:ss")</td>
-                                            <td>@item.HeThongTaiKhoan?.TenDangNhap</td>
-                                            <td><span class="badge bg-info">@item.HanhDong</span></td>
-                                            <td>@item.TenBang</td>
-                                            <td>@item.SoLuongTacDong</td>
-                                            <td>@item.NoiDung</td>
+                                            <td colspan="6" class="text-center text-muted">Chưa có nhật ký</td>
                                         </tr>
                                     }
-                                }
-                                else
-                                {
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">Chưa có nhật ký</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 @section Scripts {

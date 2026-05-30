@@ -8,7 +8,6 @@ using QuanLyChuoiCaPhe.Web.Services;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
-    [RoleAuthorize("ADMIN", "QUAN_LY")]
     public class SanPhamController : BaseController
     {
         private readonly QuanLyChuoiCaPheContext _context;
@@ -19,6 +18,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             _context = context;
         }
 
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> Index(string? search, string? danhMuc, bool? trangThai)
         {
             var query = _context.SanPhams.Include(s => s.DanhMuc).AsQueryable();
@@ -47,6 +47,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> Create()
         {
             ViewBag.DanhMucs = new SelectList(await _context.DanhMucs.ToListAsync(), "MaDanhMuc", "TenDanhMuc");
@@ -55,6 +56,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> Create(SanPham model)
         {
             // Xóa validation error cho MaSanPham (sẽ được tạo tự động)
@@ -92,6 +94,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> Edit(string id)
         {
             var sanPham = await _context.SanPhams.FindAsync(id);
@@ -107,6 +110,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> Edit(SanPham model)
         {
             // Xóa validation errors cho navigation properties
@@ -140,6 +144,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [RoleAuthorize("ADMIN", "QUAN_LY")]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             try
@@ -161,21 +166,14 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             }
         }
 
-        [RoleAuthorize]
+        [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
         public async Task<IActionResult> Menu(string? chiNhanh)
         {
-            var query = _context.VwMenuChiNhanhs.AsQueryable();
-
             // Phân quyền theo chi nhánh
             var chiNhanhFilter = GetChiNhanhFilter();
             if (chiNhanhFilter != null)
             {
-                query = query.Where(m => m.MaChiNhanh == chiNhanhFilter);
-            }
-
-            if (!string.IsNullOrEmpty(chiNhanh))
-            {
-                query = query.Where(m => m.MaChiNhanh == chiNhanh);
+                chiNhanh = chiNhanhFilter;
             }
 
             // Lọc danh sách chi nhánh theo quyền
@@ -188,7 +186,32 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ViewBag.ChiNhanhs = await chiNhanhsQuery.ToListAsync();
             ViewBag.ChiNhanh = chiNhanh;
 
-            return View(await query.Where(m => m.TrangThaiMenu == true).ToListAsync());
+            // Truy vấn trực tiếp từ bảng để đồng bộ 100% với sản phẩm, danh mục, biến thể và giá bán chi nhánh thực tế
+            var query = from spcn in _context.SanPhamChiNhanhs
+                        join cn in _context.ChiNhanhs on spcn.MaChiNhanh equals cn.MaChiNhanh
+                        join sp in _context.SanPhams on spcn.MaSanPham equals sp.MaSanPham
+                        join dm in _context.DanhMucs on sp.MaDanhMuc equals dm.MaDanhMuc
+                        join bt in _context.BienTheSanPhams on sp.MaSanPham equals bt.MaSanPham
+                        where cn.TrangThai && sp.TrangThai && bt.TrangThai && spcn.TrangThai
+                        select new VwMenuChiNhanh
+                        {
+                            MaChiNhanh = cn.MaChiNhanh,
+                            TenChiNhanh = cn.TenChiNhanh,
+                            TenDanhMuc = dm.TenDanhMuc,
+                            MaSanPham = sp.MaSanPham,
+                            TenSanPham = sp.TenSanPham,
+                            MaBienThe = bt.MaBienThe,
+                            Size = bt.Size,
+                            GiaBanThucTe = spcn.GiaBan + bt.GiaCongThem,
+                            TrangThaiMenu = spcn.TrangThai
+                        };
+
+            if (!string.IsNullOrEmpty(chiNhanh))
+            {
+                query = query.Where(m => m.MaChiNhanh == chiNhanh);
+            }
+
+            return View(await query.ToListAsync());
         }
 
         private string GenerateMaSanPham()

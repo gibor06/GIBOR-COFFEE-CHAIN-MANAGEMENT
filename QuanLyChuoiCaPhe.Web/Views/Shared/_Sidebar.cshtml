@@ -1,4 +1,4 @@
-﻿@{
+@{
     var vaiTro = Context.Session.GetString("VaiTro");
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
@@ -20,24 +20,17 @@
     </div>
 
     <ul class="sidebar-menu">
-        <li class="@activeByRoute("Dashboard", "Index")">
-            <a asp-controller="Dashboard" asp-action="Index">
-                <i class="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
-            </a>
-        </li>
-
-        @if (vaiTro == "ADMIN")
+        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
         {
-            <li class="@activeByController("TaiKhoan")">
-                <a asp-controller="TaiKhoan" asp-action="Index">
-                    <i class="bi bi-person-badge"></i>
-                    <span>Tài khoản</span>
+            <li class="@activeByRoute("Dashboard", "Index")">
+                <a asp-controller="Dashboard" asp-action="Index">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
                 </a>
             </li>
         }
 
-        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        @if (vaiTro == "ADMIN")
         {
             <li class="@activeByController("ChiNhanh")">
                 <a asp-controller="ChiNhanh" asp-action="Index">
@@ -45,7 +38,10 @@
                     <span>Chi nhánh</span>
                 </a>
             </li>
+        }
 
+        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        {
             <li class="@activeByController("NhanVien")">
                 <a asp-controller="NhanVien" asp-action="Index">
                     <i class="bi bi-people"></i>
@@ -61,12 +57,15 @@
             </li>
         }
 
-        <li class="@activeByController("DonHang")">
-            <a asp-controller="DonHang" asp-action="Index">
-                <i class="bi bi-receipt"></i>
-                <span>Đơn hàng</span>
-            </a>
-        </li>
+        @if (vaiTro == "ADMIN" || vaiTro == "NHAN_VIEN" || vaiTro == "QUAN_LY")
+        {
+            <li class="@activeByController("DonHang")">
+                <a asp-controller="DonHang" asp-action="Index">
+                    <i class="bi bi-receipt"></i>
+                    <span>Đơn hàng</span>
+                </a>
+            </li>
+        }
 
         @if (vaiTro == "NHAN_VIEN" || vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
         {
@@ -101,7 +100,7 @@
             </li>
         }
 
-        @if (vaiTro == "ADMIN" || vaiTro == "KE_TOAN")
+        @if (vaiTro == "ADMIN" || vaiTro == "KE_TOAN" || vaiTro == "QUAN_LY")
         {
             <li class="menu-section">Kế toán</li>
             <li class="@activeByRoute("BangLuong", "Index")">
@@ -110,12 +109,15 @@
                     <span>Bảng lương</span>
                 </a>
             </li>
-            <li class="@activeByRoute("BangLuong", "KhoiTao")">
-                <a asp-controller="BangLuong" asp-action="KhoiTao">
-                    <i class="bi bi-plus-circle"></i>
-                    <span>Khởi tạo lương</span>
-                </a>
-            </li>
+            @if (vaiTro == "ADMIN" || vaiTro == "KE_TOAN")
+            {
+                <li class="@activeByRoute("BangLuong", "KhoiTao")">
+                    <a asp-controller="BangLuong" asp-action="KhoiTao">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Khởi tạo lương</span>
+                    </a>
+                </li>
+            }
         }
 
         @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")

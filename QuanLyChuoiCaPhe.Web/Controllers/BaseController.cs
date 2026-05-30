@@ -27,22 +27,22 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         /// </summary>
         protected bool CanAccessChiNhanh(string? maChiNhanh)
         {
-            // ADMIN và KE_TOAN có thể truy cập tất cả
-            if (IsAdmin || CurrentVaiTro == "KE_TOAN") return true;
+            // ADMIN có thể truy cập tất cả
+            if (IsAdmin) return true;
 
-            // QUAN_LY và NHAN_VIEN chỉ truy cập chi nhánh của mình
+            // QUAN_LY, NHAN_VIEN, KE_TOAN, KHO chỉ truy cập chi nhánh của mình
             if (string.IsNullOrEmpty(maChiNhanh)) return false;
             return CurrentMaChiNhanh == maChiNhanh;
         }
 
         /// <summary>
         /// Lấy mã chi nhánh để filter dữ liệu
-        /// - ADMIN/KE_TOAN: null (xem tất cả)
-        /// - QUAN_LY/NHAN_VIEN: mã chi nhánh của họ
+        /// - ADMIN: null (xem tất cả)
+        /// - QUAN_LY/NHAN_VIEN/KE_TOAN/KHO: mã chi nhánh của họ
         /// </summary>
         protected string? GetChiNhanhFilter()
         {
-            return (IsAdmin || CurrentVaiTro == "KE_TOAN") ? null : CurrentMaChiNhanh;
+            return IsAdmin ? null : CurrentMaChiNhanh;
         }
 
         /// <summary>

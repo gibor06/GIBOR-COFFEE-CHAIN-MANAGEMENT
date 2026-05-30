@@ -3,95 +3,417 @@
     ViewData["Title"] = "Menu Sản phẩm";
 }
 
-<div class="container-fluid p-4">
-    <h2><i class="bi bi-menu-button-wide"></i> Menu Sản phẩm</h2>
+<style>
+    .menu-page {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        padding: 30px 0;
+    }
+    .menu-header {
+        background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(139, 69, 19, 0.3);
+        text-align: center;
+    }
+    .menu-header h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .branch-info {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    .branch-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #27ae60;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .category-section {
+        margin-bottom: 40px;
+    }
+    .branch-section {
+        margin-bottom: 60px;
+        padding: 30px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .branch-section-header {
+        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        color: white;
+        padding: 25px 35px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 6px 20px rgba(39, 174, 96, 0.3);
+    }
+    .branch-section-header h3 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .branch-section-header i {
+        font-size: 2rem;
+    }
+    .category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .category-header h5 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .menu-item-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+        border: 2px solid transparent;
+    }
+    .menu-item-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+        border-color: #8B4513;
+    }
+    .menu-item-image {
+        background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .menu-item-image::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: shimmer 3s infinite;
+    }
+    @@keyframes shimmer {
+        0%, 100% { transform: translate(0, 0); }
+        50% { transform: translate(10%, 10%); }
+    }
+    .menu-item-image i {
+        font-size: 5rem;
+        color: rgba(255,255,255,0.9);
+        z-index: 1;
+    }
+    .menu-item-body {
+        padding: 20px;
+    }
+    .menu-item-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+    }
+    .size-options {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+    .size-option {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    .size-option:last-child {
+        margin-bottom: 0;
+    }
+    .size-option:hover {
+        border-color: #8B4513;
+        transform: translateX(5px);
+        box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+    }
+    .size-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: #495057;
+    }
+    .size-label i {
+        color: #8B4513;
+        font-size: 1.1rem;
+    }
+    .size-name {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    .size-price {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #27ae60;
+        white-space: nowrap;
+    }
+    .menu-item-status {
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .status-available {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    .status-unavailable {
+        background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+        color: white;
+    }
+    .filter-section {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    .empty-menu {
+        text-align: center;
+        padding: 80px 20px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .empty-menu i {
+        font-size: 5rem;
+        color: #bdc3c7;
+        margin-bottom: 20px;
+    }
+    .empty-menu h4 {
+        color: #7f8c8d;
+        margin-bottom: 10px;
+    }
+    .btn-back {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .btn-back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    .menu-stats {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 15px;
+    }
+    .stat-item {
+        background: rgba(255,255,255,0.2);
+        padding: 10px 20px;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+    }
+    .stat-item strong {
+        font-size: 1.5rem;
+    }
+</style>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                @if (ViewBag.CurrentVaiTro == "QUAN_LY")
+<div class="menu-page">
+    <div class="container-fluid px-4">
+        <div class="menu-header">
+            <h2><i class="bi bi-menu-button-wide-fill"></i> Menu Sản phẩm GIBOR Coffee</h2>
+            @if (Model.Any())
+            {
+                var totalItems = Model.Count();
+                var branches = Model.Select(m => m.MaChiNhanh).Distinct().Count();
+                var categories = Model.Select(m => m.TenDanhMuc).Distinct().Count();
+                <div class="menu-stats">
+                    <div class="stat-item">
+                        <i class="bi bi-shop-window"></i> <strong>@branches</strong> chi nhánh
+                    </div>
+                    <div class="stat-item">
+                        <i class="bi bi-cup-hot-fill"></i> <strong>@totalItems</strong> món
+                    </div>
+                    <div class="stat-item">
+                        <i class="bi bi-grid-3x3-gap-fill"></i> <strong>@categories</strong> danh mục
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="filter-section">
+            <form method="get" class="row g-3 align-items-end">
+                @if (ViewBag.CurrentVaiTro == "QUAN_LY" || ViewBag.CurrentVaiTro == "NHAN_VIEN")
                 {
                     var currentBranch = (ViewBag.ChiNhanhs as List<ChiNhanh>)?.FirstOrDefault(c => c.MaChiNhanh == ViewBag.CurrentMaChiNhanh);
-                    <div class="col-md-6 d-flex align-items-center">
-                        <span class="fw-bold text-success fs-6">
-                            <i class="bi bi-shop"></i> Chi nhánh đang quản lý: GIBOR Coffee @(currentBranch?.TenChiNhanh ?? "")
-                        </span>
+                    <div class="col-md-8">
+                        <div class="branch-name">
+                            <i class="bi bi-shop-window"></i>
+                            <span>Chi nhánh: GIBOR Coffee @(currentBranch?.TenChiNhanh ?? "")</span>
+                        </div>
                         <input type="hidden" name="chiNhanh" value="@ViewBag.CurrentMaChiNhanh" />
                     </div>
-                    <div class="col-md-6 text-end">
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Quay lại
+                    <div class="col-md-4 text-end">
+                        <a asp-action="Index" class="btn btn-back">
+                            <i class="bi bi-arrow-left-circle"></i> Quay lại quản lý
                         </a>
                     </div>
                 }
                 else
                 {
-                    <div class="col-md-6">
-                        <select name="chiNhanh" class="form-select">
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold"><i class="bi bi-shop"></i> Chọn chi nhánh</label>
+                        <select name="chiNhanh" class="form-select form-select-lg">
                             <option value="">-- Tất cả chi nhánh --</option>
                             @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
                             {
-                                <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">@cn.TenChiNhanh</option>
+                                <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">
+                                    GIBOR Coffee @cn.TenChiNhanh
+                                </option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search"></i> Lọc
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-funnel-fill"></i> Xem menu
                         </button>
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Quay lại
+                        <a asp-action="Index" class="btn btn-back w-100 mt-2">
+                            <i class="bi bi-arrow-left-circle"></i> Quay lại
                         </a>
                     </div>
                 }
             </form>
         </div>
-    </div>
 
-    @if (Model.Any())
-    {
-        var groupedMenu = Model.GroupBy(m => m.TenDanhMuc);
-        
-        @foreach (var group in groupedMenu)
+        @if (Model.Any())
         {
-            <div class="card mb-3">
-                <div class="card-header bg-coffee text-white">
-                    <h5><i class="bi bi-cup-hot"></i> @group.Key</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        @foreach (var item in group)
-                        {
-                            <div class="col-md-4 mb-3">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-title">@item.TenSanPham</h6>
-                                        <p class="card-text">
-                                            <span class="badge bg-info">@item.Size</span>
-                                            <br />
-                                            <strong class="text-success">@item.GiaBanThucTe?.ToString("N0") đ</strong>
-                                        </p>
-                                        @if (item.TrangThaiMenu == true)
-                                        {
-                                            <span class="badge bg-success">Còn hàng</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Hết hàng</span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
+            var groupedByBranch = Model.GroupBy(m => new { m.MaChiNhanh, m.TenChiNhanh }).OrderBy(g => g.Key.TenChiNhanh);
+            
+            @foreach (var branchGroup in groupedByBranch)
+            {
+                <div class="branch-section mb-5">
+                    <div class="branch-section-header">
+                        <h3>
+                            <i class="bi bi-shop-window"></i>
+                            GIBOR Coffee @branchGroup.Key.TenChiNhanh
+                            <span class="badge bg-light text-dark ms-2">@branchGroup.Count() món</span>
+                        </h3>
                     </div>
+                    
+                    @{
+                        var categoriesInBranch = branchGroup.GroupBy(m => m.TenDanhMuc).OrderBy(g => g.Key);
+                    }
+                    
+                    @foreach (var categoryGroup in categoriesInBranch)
+                    {
+                        <div class="category-section">
+                            <div class="category-header">
+                                <h5>
+                                    <i class="bi bi-cup-hot-fill"></i>
+                                    @categoryGroup.Key
+                                    <span class="badge bg-light text-dark ms-2">@categoryGroup.Select(x => x.TenSanPham).Distinct().Count() món</span>
+                                </h5>
+                            </div>
+                            <div class="row g-4">
+                                @{
+                                    var productsInCategory = categoryGroup.GroupBy(m => m.TenSanPham).OrderBy(g => g.Key);
+                                }
+                                @foreach (var productGroup in productsInCategory)
+                                {
+                                    var sizes = productGroup.OrderBy(p => p.Size).ToList();
+                                    var firstItem = sizes.First();
+                                    
+                                    <div class="col-xl-3 col-lg-4 col-md-6">
+                                        <div class="menu-item-card">
+                                            <div class="menu-item-image">
+                                                <i class="bi bi-cup-hot-fill"></i>
+                                            </div>
+                                            <div class="menu-item-body">
+                                                <div class="menu-item-name">
+                                                    @productGroup.Key
+                                                </div>
+                                                
+                                                <div class="size-options mb-3">
+                                                    @foreach (var sizeItem in sizes)
+                                                    {
+                                                        <div class="size-option">
+                                                            <div class="size-label">
+                                                                <i class="bi bi-cup"></i>
+                                                                <span class="size-name">@sizeItem.Size</span>
+                                                            </div>
+                                                            <div class="size-price">
+                                                                @sizeItem.GiaBanThucTe?.ToString("N0") đ
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                
+                                                <div class="menu-item-status @(firstItem.TrangThaiMenu == true ? "status-available" : "status-unavailable")">
+                                                    @if (firstItem.TrangThaiMenu == true)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill"></i> <span>Còn hàng</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-x-circle-fill"></i> <span>Hết hàng</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
+            }
+        }
+        else
+        {
+            <div class="empty-menu">
+                <i class="bi bi-inbox"></i>
+                <h4>Chưa có sản phẩm nào trong menu</h4>
+                <p class="text-muted">Vui lòng chọn chi nhánh hoặc thêm sản phẩm vào hệ thống</p>
+                <a asp-action="Index" class="btn btn-back mt-3">
+                    <i class="bi bi-arrow-left-circle"></i> Quay lại quản lý sản phẩm
+                </a>
             </div>
         }
-    }
-    else
-    {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Chưa có sản phẩm nào trong menu.
-        </div>
-    }
+    </div>
 </div>
