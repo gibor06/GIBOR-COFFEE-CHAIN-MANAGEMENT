@@ -366,6 +366,116 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 return Json(new { success = false, message = $"Lỗi: {ex.InnerException?.Message ?? ex.Message}" });
             }
         }
+
+        [HttpGet]
+        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        public async Task<IActionResult> KhoiTao()
+        {
+            var chiNhanhFilter = GetChiNhanhFilter();
+            var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
+            if (chiNhanhFilter != null)
+            {
+                chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
+            }
+
+            ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
+            ViewBag.NguyenLieus = new SelectList(await _context.NguyenLieus.Where(n => n.TrangThai == "Đang sử dụng").ToListAsync(), "MaNguyenLieu", "TenNguyenLieu");
+            
+            var model = new KhoKhoiTaoViewModel();
+            if (chiNhanhFilter != null)
+            {
+                model.MaChiNhanh = chiNhanhFilter;
+            }
+            
+            return View(model);
+        }
+
+        [HttpPost]
+        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> KhoiTao(KhoKhoiTaoViewModel model)
+        {
+            var userRole = HttpContext.Session.GetString("UserRole") ?? CurrentVaiTro;
+            if (userRole != "ADMIN")
+            {
+                model.MaChiNhanh = CurrentMaChiNhanh ?? "";
+            }
+
+            ModelState.Remove(nameof(model.MaChiNhanh));
+
+            // Kiểm tra quyền truy cập chi nhánh
+            var accessCheck = CheckChiNhanhAccess(model.MaChiNhanh);
+            if (accessCheck != null) return accessCheck;
+
+            if (!ModelState.IsValid)
+            {
+                var chiNhanhFilter = GetChiNhanhFilter();
+                var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
+                if (chiNhanhFilter != null)
+                {
+                    chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
+                }
+
+                ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
+                ViewBag.NguyenLieus = new SelectList(await _context.NguyenLieus.Where(n => n.TrangThai == "Đang sử dụng").ToListAsync(), "MaNguyenLieu", "TenNguyenLieu");
+                return View(model);
+            }
+
+            try
+            {
+                // Kiểm tra xem đã tồn tại chưa
+                var existing = await _context.TonKhoNguyenLieus
+                    .FirstOrDefaultAsync(t => t.MaChiNhanh == model.MaChiNhanh && t.MaNguyenLieu == model.MaNguyenLieu);
+
+                if (existing != null)
+                {
+                    TempData["Error"] = "Nguyên liệu này đã được khởi tạo cho chi nhánh này rồi!";
+                    
+                    var chiNhanhFilter = GetChiNhanhFilter();
+                    var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
+                    if (chiNhanhFilter != null)
+                    {
+                        chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
+                    }
+
+                    ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
+                    ViewBag.NguyenLieus = new SelectList(await _context.NguyenLieus.Where(n => n.TrangThai == "Đang sử dụng").ToListAsync(), "MaNguyenLieu", "TenNguyenLieu");
+                    return View(model);
+                }
+
+                // Tạo mới tồn kho
+                var tonKho = new TonKhoNguyenLieu
+                {
+                    MaChiNhanh = model.MaChiNhanh,
+                    MaNguyenLieu = model.MaNguyenLieu,
+                    SoLuongTon = 0,
+                    MucCanhBao = model.MucCanhBao,
+                    HanSuDung = model.HanSuDung,
+                    SoLuongDaDat = 0
+                };
+
+                _context.TonKhoNguyenLieus.Add(tonKho);
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] = "Khởi tạo tồn kho thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi: {ex.InnerException?.Message ?? ex.Message}";
+                
+                var chiNhanhFilter = GetChiNhanhFilter();
+                var chiNhanhsQuery = _context.ChiNhanhs.Where(c => c.TrangThai);
+                if (chiNhanhFilter != null)
+                {
+                    chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
+                }
+
+                ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
+                ViewBag.NguyenLieus = new SelectList(await _context.NguyenLieus.Where(n => n.TrangThai == "Đang sử dụng").ToListAsync(), "MaNguyenLieu", "TenNguyenLieu");
+                return View(model);
+            }
+        }
     }
 }
 

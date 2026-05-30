@@ -1,117 +1,232 @@
 @model DonHangCreateViewModel
 @{
     ViewData["Title"] = "Tạo Đơn hàng";
+    var sanPhamGroups = (ViewBag.BienThes as List<BienTheSanPham>)
+        .GroupBy(bt => bt.SanPham)
+        .ToList();
 }
 
+<style>
+    .product-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        height: 100%;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border-color: #8B4513;
+    }
+    .product-card.selected {
+        border-color: #8B4513;
+        background-color: #fff8f0;
+    }
+    .product-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+    }
+    .product-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #333;
+        min-height: 40px;
+    }
+    .product-price {
+        color: #8B4513;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .size-badge {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .size-badge:hover {
+        transform: scale(1.1);
+    }
+    .size-badge.active {
+        background-color: #8B4513 !important;
+        color: white !important;
+    }
+    .cart-item {
+        border-bottom: 1px solid #eee;
+        padding: 10px 0;
+    }
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+    .search-box {
+        position: relative;
+    }
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+    .search-box input {
+        padding-left: 40px;
+    }
+</style>
+
 <div class="container-fluid p-4">
-    <h2><i class="bi bi-receipt-cutoff"></i> Tạo Đơn hàng - POS</h2>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-receipt-cutoff"></i> Tạo Đơn hàng - POS</h2>
+            <p class="text-muted mb-0">
+                <i class="bi bi-shop"></i> @ViewBag.CurrentTenChiNhanh | 
+                <i class="bi bi-person"></i> @ViewBag.CurrentTenNhanVien
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
 
     <form asp-action="Create" method="post" id="donHangForm">
         <div class="row">
-            <div class="col-md-8">
-                <div class="card mb-3">
+            <!-- Left: Product Menu -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-coffee text-white">
-                        <h5><i class="bi bi-cart"></i> Chọn sản phẩm</h5>
+                        <h5 class="mb-0"><i class="bi bi-grid-3x3-gap"></i> Menu sản phẩm</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <select id="bienTheSelect" class="form-select">
-                                    <option value="">-- Chọn sản phẩm --</option>
-                                    @foreach (var bt in ViewBag.BienThes as List<BienTheSanPham>)
-                                    {
-                                        <option value="@bt.MaBienThe">@bt.SanPham.TenSanPham - @bt.Size</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="number" id="soLuongInput" class="form-control" placeholder="SL" value="1" min="1" />
-                            </div>
-                            <div class="col-md-2">
-                                <button type="button" class="btn btn-coffee w-100" onclick="themSanPham()">
-                                    <i class="bi bi-plus"></i> Thêm
-                                </button>
-                            </div>
+                        <!-- Search Box -->
+                        <div class="search-box mb-3">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="searchProduct" class="form-control" 
+                                   placeholder="Tìm kiếm sản phẩm..." />
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table" id="cartTable">
-                                <thead>
-                                    <tr>
-                                        <th>Sản phẩm</th>
-                                        <th>Size</th>
-                                        <th>Đơn giá</th>
-                                        <th>SL</th>
-                                        <th>Thành tiền</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cartBody">
-                                </tbody>
-                            </table>
+                        <!-- Product Grid -->
+                        <div class="row g-3" id="productGrid">
+                            @foreach (var group in sanPhamGroups)
+                            {
+                                var sp = group.Key;
+                                var bienThes = group.ToList();
+                                var firstBienThe = bienThes.First();
+                                
+                                <div class="col-md-4 col-sm-6 product-item" data-name="@sp.TenSanPham.ToLower()">
+                                    <div class="card product-card" onclick="selectProduct('@sp.MaSanPham')">
+                                        <div class="card-body p-3">
+                                            <div class="text-center mb-2">
+                                                <i class="bi bi-cup-hot-fill text-coffee" style="font-size: 3rem;"></i>
+                                            </div>
+                                            <h6 class="product-name text-center">@sp.TenSanPham</h6>
+                                            <p class="product-price text-center mb-2">
+                                                @{
+                                                    var chiNhanh = ViewBag.CurrentTenChiNhanh;
+                                                    var basePrice = sp.GiaCoBan;
+                                                }
+                                                @basePrice.ToString("N0") đ
+                                            </p>
+                                            <div class="d-flex justify-content-center gap-1 flex-wrap">
+                                                @foreach (var bt in bienThes)
+                                                {
+                                                    <span class="badge bg-secondary size-badge" 
+                                                          data-product="@sp.MaSanPham"
+                                                          data-bienthe="@bt.MaBienThe"
+                                                          data-size="@bt.Size"
+                                                          onclick="event.stopPropagation(); selectSize('@bt.MaBienThe', '@sp.TenSanPham', '@bt.Size', this)">
+                                                        @bt.Size
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         </div>
+
+                        @if (!sanPhamGroups.Any())
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                                <p class="text-muted mt-3">Không có sản phẩm nào trong menu</p>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card mb-3">
+            <!-- Right: Cart & Checkout -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
                     <div class="card-header bg-coffee text-white">
-                        <h5><i class="bi bi-info-circle"></i> Thông tin đơn hàng</h5>
+                        <h5 class="mb-0"><i class="bi bi-cart3"></i> Giỏ hàng (<span id="cartCount">0</span>)</h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label font-weight-bold"><i class="bi bi-shop"></i> Chi nhánh</label>
-                            <input type="text" class="form-control" value="@ViewBag.CurrentTenChiNhanh" readonly disabled />
-                            <input type="hidden" asp-for="MaChiNhanh" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label font-weight-bold"><i class="bi bi-person-fill"></i> Nhân viên</label>
-                            <input type="text" class="form-control" value="@ViewBag.CurrentTenNhanVien" readonly disabled />
-                            <input type="hidden" asp-for="MaNV" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Khách hàng (tùy chọn)</label>
-                            <select asp-for="MaKH" class="form-select" asp-items="ViewBag.KhachHangs">
-                                <option value="">-- Khách vãng lai --</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Phương thức thanh toán</label>
-                            <select asp-for="PhuongThucThanhToan" class="form-select">
-                                <option value="Tiền mặt">Tiền mặt</option>
-                                <option value="Thẻ">Thẻ</option>
-                                <option value="Chuyển khoản">Chuyển khoản</option>
-                                <option value="QR">QR</option>
-                                <option value="Ví điện tử">Ví điện tử</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Giảm giá</label>
-                            <input asp-for="GiamGia" type="number" class="form-control" value="0" min="0" id="giamGiaInput" onchange="tinhTong()" />
+                        <!-- Cart Items -->
+                        <div id="cartItems" style="max-height: 300px; overflow-y: auto;">
+                            <div class="text-center text-muted py-4" id="emptyCart">
+                                <i class="bi bi-cart-x" style="font-size: 3rem;"></i>
+                                <p class="mt-2 mb-0">Giỏ hàng trống</p>
+                                <small>Click vào sản phẩm để thêm</small>
+                            </div>
                         </div>
 
                         <hr />
 
-                        <div class="d-flex justify-content-between mb-2">
-                            <strong>Tạm tính:</strong>
-                            <span id="tamTinh">0 đ</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <strong>Giảm giá:</strong>
-                            <span id="giamGiaDisplay">0 đ</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-3">
-                            <h5>Tổng cộng:</h5>
-                            <h5 class="text-success" id="tongCong">0 đ</h5>
+                        <!-- Customer & Payment Info -->
+                        <div class="mb-3">
+                            <label class="form-label small"><i class="bi bi-person"></i> Khách hàng</label>
+                            <select asp-for="MaKH" class="form-select form-select-sm" asp-items="ViewBag.KhachHangs">
+                                <option value="">-- Khách vãng lai --</option>
+                            </select>
                         </div>
 
-                        <button type="submit" class="btn btn-coffee w-100 btn-lg">
+                        <div class="mb-3">
+                            <label class="form-label small"><i class="bi bi-credit-card"></i> Thanh toán</label>
+                            <select asp-for="PhuongThucThanhToan" class="form-select form-select-sm">
+                                <option value="Tiền mặt">💵 Tiền mặt</option>
+                                <option value="Thẻ">💳 Thẻ</option>
+                                <option value="Chuyển khoản">🏦 Chuyển khoản</option>
+                                <option value="QR">📱 QR Code</option>
+                                <option value="Ví điện tử">💰 Ví điện tử</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small"><i class="bi bi-percent"></i> Giảm giá</label>
+                            <div class="input-group input-group-sm">
+                                <input asp-for="GiamGia" type="number" class="form-control" 
+                                       value="0" min="0" id="giamGiaInput" onchange="tinhTong()" />
+                                <span class="input-group-text">đ</span>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <!-- Summary -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tạm tính:</span>
+                            <strong id="tamTinh">0 đ</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Giảm giá:</span>
+                            <strong class="text-danger" id="giamGiaDisplay">0 đ</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 pt-2 border-top">
+                            <h5 class="mb-0">Tổng cộng:</h5>
+                            <h5 class="mb-0 text-success" id="tongCong">0 đ</h5>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <button type="submit" class="btn btn-coffee w-100 btn-lg mb-2">
                             <i class="bi bi-check-circle"></i> Thanh toán
                         </button>
-                        <a asp-action="Index" class="btn btn-secondary w-100 mt-2">
-                            <i class="bi bi-x-circle"></i> Hủy
-                        </a>
+                        <button type="button" class="btn btn-outline-danger w-100" onclick="clearCart()">
+                            <i class="bi bi-trash"></i> Xóa giỏ hàng
+                        </button>
+
+                        <!-- Hidden Fields -->
+                        <input type="hidden" asp-for="MaChiNhanh" />
+                        <input type="hidden" asp-for="MaNV" />
                     </div>
                 </div>
             </div>
@@ -119,86 +234,290 @@
     </form>
 </div>
 
+<!-- Size Selection Modal -->
+<div class="modal fade" id="sizeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-coffee text-white">
+                <h5 class="modal-title"><i class="bi bi-cup-straw"></i> Chọn size</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="modalProductName" class="mb-3"></h6>
+                <div id="modalSizeOptions" class="d-grid gap-2">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         let cart = [];
+        let currentProduct = null;
 
-        async function themSanPham() {
-            const maBienThe = document.getElementById('bienTheSelect').value;
-            const soLuong = parseInt(document.getElementById('soLuongInput').value);
-
-            if (!maBienThe) {
-                showToast('Vui lòng chọn sản phẩm', 'error');
-                return;
-            }
-
-            const response = await fetch('/DonHang/GetBienThePrice?id=' + maBienThe);
-            const data = await response.json();
-
-            if (!data.success) {
-                showToast('Không tìm thấy sản phẩm', 'error');
-                return;
-            }
-
-            const existing = cart.find(item => item.maBienThe === maBienThe);
-            if (existing) {
-                existing.soLuong += soLuong;
-            } else {
-                cart.push({
-                    maBienThe: maBienThe,
-                    tenSanPham: data.tenSanPham,
-                    size: data.size,
-                    donGia: data.price,
-                    soLuong: soLuong
-                });
-            }
-
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, cart initialized:', cart);
             renderCart();
-            document.getElementById('bienTheSelect').value = '';
-            document.getElementById('soLuongInput').value = 1;
+        });
+
+        // Search products
+        document.getElementById('searchProduct').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const products = document.querySelectorAll('.product-item');
+            
+            products.forEach(product => {
+                const name = product.getAttribute('data-name');
+                if (name.includes(searchTerm)) {
+                    product.style.display = '';
+                } else {
+                    product.style.display = 'none';
+                }
+            });
+        });
+
+        // Select product (show size options)
+        function selectProduct(maSanPham) {
+            const sizeBadges = document.querySelectorAll(`[data-product="${maSanPham}"]`);
+            const productCard = document.querySelector(`[data-product="${maSanPham}"]`).closest('.product-card');
+            const productName = productCard.querySelector('.product-name').textContent.trim();
+            
+            if (sizeBadges.length === 1) {
+                // Only one size, add directly
+                const badge = sizeBadges[0];
+                selectSize(
+                    badge.getAttribute('data-bienthe'),
+                    productName,
+                    badge.getAttribute('data-size'),
+                    badge
+                );
+            } else {
+                // Multiple sizes, show modal
+                document.getElementById('modalProductName').textContent = productName;
+                
+                const modalOptions = document.getElementById('modalSizeOptions');
+                modalOptions.innerHTML = '';
+                
+                sizeBadges.forEach(badge => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline-coffee btn-lg';
+                    btn.textContent = badge.getAttribute('data-size');
+                    btn.onclick = () => {
+                        selectSize(
+                            badge.getAttribute('data-bienthe'),
+                            productName,
+                            badge.getAttribute('data-size'),
+                            badge
+                        );
+                        bootstrap.Modal.getInstance(document.getElementById('sizeModal')).hide();
+                    };
+                    modalOptions.appendChild(btn);
+                });
+                
+                new bootstrap.Modal(document.getElementById('sizeModal')).show();
+            }
         }
 
+        // Select size and add to cart
+        async function selectSize(maBienThe, tenSanPham, size, badge) {
+            console.log('selectSize called:', { maBienThe, tenSanPham, size });
+            
+            try {
+                const response = await fetch('/DonHang/GetBienThePrice?id=' + maBienThe);
+                const data = await response.json();
+
+                console.log('Price data:', data);
+
+                if (!data.success) {
+                    showToast('Không tìm thấy sản phẩm', 'error');
+                    return;
+                }
+
+                const existing = cart.find(item => item.maBienThe === maBienThe);
+                if (existing) {
+                    existing.soLuong += 1;
+                    console.log('Updated existing item:', existing);
+                } else {
+                    const newItem = {
+                        maBienThe: maBienThe,
+                        tenSanPham: tenSanPham,
+                        size: size,
+                        donGia: data.price,
+                        soLuong: 1
+                    };
+                    cart.push(newItem);
+                    console.log('Added new item:', newItem);
+                }
+
+                console.log('Current cart:', cart);
+
+                // Visual feedback
+                if (badge) {
+                    badge.classList.add('active');
+                    setTimeout(() => badge.classList.remove('active'), 300);
+                }
+
+                renderCart();
+                showToast(`Đã thêm ${tenSanPham} (${size})`, 'success');
+            } catch (error) {
+                console.error('Error in selectSize:', error);
+                showToast('Có lỗi xảy ra: ' + error.message, 'error');
+            }
+        }
+
+        // Render cart
+        function renderCart() {
+            console.log('renderCart called, cart:', cart);
+            
+            const cartItems = document.getElementById('cartItems');
+            const emptyCart = document.getElementById('emptyCart');
+            const cartCount = document.getElementById('cartCount');
+
+            if (cart.length === 0) {
+                if (!emptyCart) {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.id = 'emptyCart';
+                    emptyDiv.className = 'text-center text-muted py-4';
+                    emptyDiv.innerHTML = `
+                        <i class="bi bi-cart-x" style="font-size: 3rem;"></i>
+                        <p class="mt-2">Giỏ hàng trống</p>
+                    `;
+                    cartItems.innerHTML = '';
+                    cartItems.appendChild(emptyDiv);
+                } else {
+                    emptyCart.style.display = 'block';
+                    cartItems.innerHTML = '';
+                    cartItems.appendChild(emptyCart);
+                }
+                cartCount.textContent = '0';
+            } else {
+                if (emptyCart) {
+                    emptyCart.style.display = 'none';
+                }
+                cartItems.innerHTML = '';
+                
+                cart.forEach((item, index) => {
+                    const thanhTien = item.donGia * item.soLuong;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'cart-item';
+                    itemDiv.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <strong class="d-block">${item.tenSanPham}</strong>
+                                <small class="text-muted">Size: ${item.size}</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="xoaSanPham('${item.maBienThe}')" title="Xóa">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        onclick="updateQuantity('${item.maBienThe}', -1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" disabled>
+                                    ${item.soLuong}
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        onclick="updateQuantity('${item.maBienThe}', 1)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <strong class="text-coffee">${formatMoney(thanhTien)}</strong>
+                        </div>
+                    `;
+                    cartItems.appendChild(itemDiv);
+                });
+
+                cartCount.textContent = cart.length;
+            }
+
+            tinhTong();
+            console.log('Cart rendered successfully');
+        }
+
+        // Update quantity
+        function updateQuantity(maBienThe, change) {
+            const item = cart.find(i => i.maBienThe === maBienThe);
+            if (item) {
+                item.soLuong += change;
+                if (item.soLuong <= 0) {
+                    xoaSanPham(maBienThe);
+                } else {
+                    renderCart();
+                }
+            }
+        }
+
+        // Remove item
         function xoaSanPham(maBienThe) {
             cart = cart.filter(item => item.maBienThe !== maBienThe);
             renderCart();
         }
 
-        function renderCart() {
-            const tbody = document.getElementById('cartBody');
-            tbody.innerHTML = '';
-
-            cart.forEach(item => {
-                const thanhTien = item.donGia * item.soLuong;
-                const row = `
-                    <tr>
-                        <td>${item.tenSanPham}</td>
-                        <td>${item.size}</td>
-                        <td>${formatMoney(item.donGia)}</td>
-                        <td>${item.soLuong}</td>
-                        <td>${formatMoney(thanhTien)}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="xoaSanPham('${item.maBienThe}')">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-
-            tinhTong();
+        // Clear cart
+        function clearCart() {
+            if (cart.length === 0) return;
+            
+            if (confirm('Bạn có chắc muốn xóa toàn bộ giỏ hàng?')) {
+                cart = [];
+                renderCart();
+                showToast('Đã xóa giỏ hàng', 'info');
+            }
         }
 
+        // Calculate total
         function tinhTong() {
             const tamTinh = cart.reduce((sum, item) => sum + (item.donGia * item.soLuong), 0);
             const giamGia = parseFloat(document.getElementById('giamGiaInput').value) || 0;
-            const tongCong = tamTinh - giamGia;
+            const tongCong = Math.max(0, tamTinh - giamGia);
 
             document.getElementById('tamTinh').textContent = formatMoney(tamTinh);
             document.getElementById('giamGiaDisplay').textContent = formatMoney(giamGia);
             document.getElementById('tongCong').textContent = formatMoney(tongCong);
         }
 
+        // Format money
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('vi-VN', { 
+                style: 'currency', 
+                currency: 'VND' 
+            }).format(amount);
+        }
+
+        // Show toast notification
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 150);
+            }, 3000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        // Form submit
         document.getElementById('donHangForm').addEventListener('submit', function(e) {
             if (cart.length === 0) {
                 e.preventDefault();
@@ -226,6 +545,21 @@
                 input3.value = item.donGia;
                 this.appendChild(input3);
             });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + Enter to submit
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                if (cart.length > 0) {
+                    document.getElementById('donHangForm').submit();
+                }
+            }
+            // Escape to clear search
+            if (e.key === 'Escape') {
+                document.getElementById('searchProduct').value = '';
+                document.getElementById('searchProduct').dispatchEvent(new Event('input'));
+            }
         });
     </script>
     @await Html.PartialAsync("_ValidationScriptsPartial")

@@ -121,47 +121,85 @@
             <h5><i class="bi bi-list-ul"></i> Chi tiết sản phẩm</h5>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead class="table-light">
-                        <tr>
-                            <th>STT</th>
-                            <th>Sản phẩm</th>
-                            <th>Size</th>
-                            <th>Số lượng</th>
-                            <th>Đơn giá</th>
-                            <th>Thành tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @{
-                            int stt = 1;
-                        }
-                        @foreach (var item in Model.ChiTietDonHangs)
-                        {
+            @if (Model.ChiTietDonHangs == null || !Model.ChiTietDonHangs.Any())
+            {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Không có chi tiết sản phẩm cho đơn hàng này.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
                             <tr>
-                                <td>@stt</td>
-                                <td>
-                                    <strong>@item.BienTheSanPham.SanPham.TenSanPham</strong>
-                                    <br />
-                                    <small class="text-muted">@item.MaBienThe</small>
-                                </td>
-                                <td><span class="badge bg-secondary">@item.BienTheSanPham.Size</span></td>
-                                <td class="text-center">@item.SoLuong</td>
-                                <td class="text-end">@item.DonGia.ToString("N0") đ</td>
-                                <td class="text-end"><strong>@item.ThanhTien.ToString("N0") đ</strong></td>
+                                <th>STT</th>
+                                <th>Sản phẩm</th>
+                                <th>Size</th>
+                                <th>Số lượng</th>
+                                <th>Đơn giá</th>
+                                <th>Thành tiền</th>
+                                <th>Ghi chú</th>
                             </tr>
-                            stt++;
-                        }
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <th colspan="5" class="text-end">Tổng cộng:</th>
-                            <th class="text-end">@Model.TongTien.ToString("N0") đ</th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            @{
+                                int stt = 1;
+                            }
+                            @foreach (var item in Model.ChiTietDonHangs)
+                            {
+                                <tr>
+                                    <td>@stt</td>
+                                    <td>
+                                        @if (item.BienTheSanPham?.SanPham != null)
+                                        {
+                                            <strong>@item.BienTheSanPham.SanPham.TenSanPham</strong>
+                                            <br />
+                                            <small class="text-muted">@item.MaBienThe</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-danger">Sản phẩm không tồn tại</span>
+                                            <br />
+                                            <small class="text-muted">@item.MaBienThe</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (item.BienTheSanPham != null)
+                                        {
+                                            <span class="badge bg-secondary">@item.BienTheSanPham.Size</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">N/A</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">@item.SoLuong</td>
+                                    <td class="text-end">@item.DonGia.ToString("N0") đ</td>
+                                    <td class="text-end"><strong>@item.ThanhTien.ToString("N0") đ</strong></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.GhiChu))
+                                        {
+                                            <small class="text-muted">@item.GhiChu</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">-</small>
+                                        }
+                                    </td>
+                                </tr>
+                                stt++;
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="6" class="text-end">Tổng cộng:</th>
+                                <th class="text-end">@Model.TongTien.ToString("N0") đ</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
         </div>
     </div>
 </div>

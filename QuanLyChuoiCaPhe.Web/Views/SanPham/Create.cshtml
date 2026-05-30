@@ -35,7 +35,7 @@
                 @Html.AntiForgeryToken()
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label asp-for="TenSanPham" class="form-label"></label>
+                        <label asp-for="TenSanPham" class="form-label">Tên sản phẩm</label>
                         <input asp-for="TenSanPham" class="form-control" />
                         <span asp-validation-for="TenSanPham" class="text-danger"></span>
                     </div>
@@ -47,7 +47,7 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label asp-for="GiaCoBan" class="form-label"></label>
+                        <label asp-for="GiaCoBan" class="form-label">Giá cơ bản</label>
                         <input asp-for="GiaCoBan" type="number" step="1000" class="form-control" />
                         <span asp-validation-for="GiaCoBan" class="text-danger"></span>
                     </div>
@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label asp-for="MoTa" class="form-label"></label>
+                    <label asp-for="MoTa" class="form-label">Mô tả</label>
                     <textarea asp-for="MoTa" class="form-control" rows="3"></textarea>
                     <span asp-validation-for="MoTa" class="text-danger"></span>
                 </div>
