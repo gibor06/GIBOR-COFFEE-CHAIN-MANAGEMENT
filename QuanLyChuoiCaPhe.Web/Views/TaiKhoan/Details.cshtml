@@ -1,0 +1,247 @@
+@model HeThongTaiKhoan
+@{
+    ViewData["Title"] = "Chi tiết tài khoản";
+    var nhanVien = Model.TaiKhoanNhanViens.FirstOrDefault()?.ThongTinNhanVien;
+}
+
+<div class="container-fluid p-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-person-badge"></i> Chi tiết tài khoản</h2>
+            <p class="text-muted mb-0">Thông tin chi tiết về tài khoản @Model.TenDangNhap</p>
+        </div>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.MaTK" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Sửa
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Account Information -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> Thông tin tài khoản</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 40%;">Mã tài khoản:</td>
+                                <td><strong><code>@Model.MaTK</code></strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tên đăng nhập:</td>
+                                <td><strong>@Model.TenDangNhap</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Vai trò:</td>
+                                <td>
+                                    @{
+                                        var badgeClass = Model.VaiTro switch
+                                        {
+                                            "ADMIN" => "bg-danger",
+                                            "QUAN_LY" => "bg-primary",
+                                            "KE_TOAN" => "bg-info",
+                                            "KHO" => "bg-warning",
+                                            _ => "bg-secondary"
+                                        };
+                                        var roleText = Model.VaiTro switch
+                                        {
+                                            "QUAN_LY" => "QUẢN LÝ",
+                                            "NHAN_VIEN" => "NHÂN VIÊN",
+                                            "KE_TOAN" => "KẾ TOÁN",
+                                            _ => Model.VaiTro
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@roleText</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Trạng thái:</td>
+                                <td>
+                                    @if (Model.TrangThai)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Hoạt động
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-lock"></i> Đã khóa
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Ngày tạo:</td>
+                                <td>
+                                    <i class="bi bi-calendar"></i>
+                                    @Model.NgayTao.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Information -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-person-lines-fill"></i> Thông tin nhân viên</h5>
+                </div>
+                <div class="card-body">
+                    @if (nhanVien != null)
+                    {
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted" style="width: 40%;">Mã nhân viên:</td>
+                                    <td><strong><code>@nhanVien.MaNV</code></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Họ tên:</td>
+                                    <td><strong>@nhanVien.HoTenNV</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Chức vụ:</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            @(nhanVien.ChucVuNhanVien?.TenChucVu ?? "N/A")
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Chi nhánh:</td>
+                                    <td>
+                                        <i class="bi bi-shop"></i>
+                                        @(nhanVien.ChiNhanh?.TenChiNhanh ?? "N/A")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Số điện thoại:</td>
+                                    <td>
+                                        <i class="bi bi-telephone"></i>
+                                        @(nhanVien.SoDienThoai ?? "N/A")
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Email:</td>
+                                    <td>
+                                        <i class="bi bi-envelope"></i>
+                                        @(nhanVien.Email ?? "N/A")
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3 mb-0">Tài khoản chưa được liên kết với nhân viên</p>
+                            <small class="text-muted">Đây là tài khoản hệ thống</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Thao tác</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a asp-action="Edit" asp-route-id="@Model.MaTK" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Chỉnh sửa thông tin
+                        </a>
+                        <a asp-action="ResetPassword" asp-route-id="@Model.MaTK" class="btn btn-warning">
+                            <i class="bi bi-key"></i> Đặt lại mật khẩu
+                        </a>
+                        @if (Model.TrangThai)
+                        {
+                            <button type="button" class="btn btn-secondary" onclick="toggleStatus('@Model.MaTK')">
+                                <i class="bi bi-lock"></i> Khóa tài khoản
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success" onclick="toggleStatus('@Model.MaTK')">
+                                <i class="bi bi-unlock"></i> Mở khóa tài khoản
+                            </button>
+                        }
+                        @if (nhanVien == null)
+                        {
+                            <button type="button" class="btn btn-danger" onclick="deleteTaiKhoan('@Model.MaTK', '@Model.TenDangNhap')">
+                                <i class="bi bi-trash"></i> Xóa tài khoản
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleStatus(id) {
+            if (confirm('Bạn có chắc muốn thay đổi trạng thái tài khoản này?')) {
+                fetch('/TaiKhoan/ToggleStatus?id=' + id, { 
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Có lỗi xảy ra: ' + error);
+                });
+            }
+        }
+
+        function deleteTaiKhoan(id, username) {
+            if (confirm(`Bạn có chắc muốn xóa tài khoản "${username}"?\n\nHành động này không thể hoàn tác!`)) {
+                fetch('/TaiKhoan/Delete?id=' + id, { 
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.href = '/TaiKhoan';
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Có lỗi xảy ra: ' + error);
+                });
+            }
+        }
+    </script>
+}

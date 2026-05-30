@@ -173,6 +173,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             var chiNhanhFilter = GetChiNhanhFilter();
             if (chiNhanhFilter != null)
             {
+                // Nhân viên/Quản lý: Chỉ xem chi nhánh của mình
                 chiNhanh = chiNhanhFilter;
             }
 
@@ -183,7 +184,23 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 chiNhanhsQuery = chiNhanhsQuery.Where(c => c.MaChiNhanh == chiNhanhFilter);
             }
 
-            ViewBag.ChiNhanhs = await chiNhanhsQuery.ToListAsync();
+            var chiNhanhs = await chiNhanhsQuery.OrderBy(c => c.TenChiNhanh).ToListAsync();
+            ViewBag.ChiNhanhs = chiNhanhs;
+            ViewBag.IsAdmin = chiNhanhFilter == null; // Admin không có filter chi nhánh
+
+            // Admin chưa chọn chi nhánh: Mặc định chọn chi nhánh đầu tiên
+            if (chiNhanhFilter == null && string.IsNullOrEmpty(chiNhanh))
+            {
+                chiNhanh = chiNhanhs.FirstOrDefault()?.MaChiNhanh;
+                
+                // Nếu không có chi nhánh nào, trả về empty
+                if (string.IsNullOrEmpty(chiNhanh))
+                {
+                    ViewBag.ChiNhanh = null;
+                    return View(new List<VwMenuChiNhanh>());
+                }
+            }
+
             ViewBag.ChiNhanh = chiNhanh;
 
             // Truy vấn trực tiếp từ bảng để đồng bộ 100% với sản phẩm, danh mục, biến thể và giá bán chi nhánh thực tế
@@ -206,6 +223,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                             TrangThaiMenu = spcn.TrangThai
                         };
 
+            // Lọc theo chi nhánh đã chọn (bắt buộc phải có)
             if (!string.IsNullOrEmpty(chiNhanh))
             {
                 query = query.Where(m => m.MaChiNhanh == chiNhanh);

@@ -4,117 +4,280 @@
 }
 
 <div class="container-fluid p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="bi bi-person-badge"></i> Quản lý Tài khoản</h2>
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-person-badge"></i> Quản lý Tài khoản</h2>
+            <p class="text-muted mb-0">Quản lý tài khoản người dùng hệ thống</p>
+        </div>
         <a asp-action="Create" class="btn btn-coffee">
             <i class="bi bi-plus-circle"></i> Thêm tài khoản
         </a>
     </div>
 
-    <div class="card mb-3">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Tổng tài khoản</h6>
+                            <h3 class="mb-0">@ViewBag.TotalAccounts</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Đang hoạt động</h6>
+                            <h3 class="mb-0">@ViewBag.ActiveAccounts</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-x-circle-fill text-secondary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Đã khóa</h6>
+                            <h3 class="mb-0">@ViewBag.InactiveAccounts</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-shield-fill-check text-danger" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Quản trị viên</h6>
+                            <h3 class="mb-0">@ViewBag.AdminAccounts</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Tìm kiếm..." value="@ViewBag.Search" />
+                    <label class="form-label small text-muted">Tìm kiếm</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Tìm theo mã, tên đăng nhập, tên nhân viên..." 
+                           value="@ViewBag.Search" />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Vai trò</label>
                     <select name="vaiTro" class="form-select">
-                        <option value="">-- Tất cả vai trò --</option>
+                        <option value="">-- Tất cả --</option>
                         <option value="ADMIN" selected="@(ViewBag.VaiTro == "ADMIN")">ADMIN</option>
-                        <option value="QUAN_LY" selected="@(ViewBag.VaiTro == "QUAN_LY")">QUAN_LY</option>
-                        <option value="NHAN_VIEN" selected="@(ViewBag.VaiTro == "NHAN_VIEN")">NHAN_VIEN</option>
+                        <option value="QUAN_LY" selected="@(ViewBag.VaiTro == "QUAN_LY")">QUẢN LÝ</option>
+                        <option value="NHAN_VIEN" selected="@(ViewBag.VaiTro == "NHAN_VIEN")">NHÂN VIÊN</option>
                         <option value="KHO" selected="@(ViewBag.VaiTro == "KHO")">KHO</option>
-                        <option value="KE_TOAN" selected="@(ViewBag.VaiTro == "KE_TOAN")">KE_TOAN</option>
+                        <option value="KE_TOAN" selected="@(ViewBag.VaiTro == "KE_TOAN")">KẾ TOÁN</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Trạng thái</label>
                     <select name="trangThai" class="form-select">
-                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="">-- Tất cả --</option>
                         <option value="true" selected="@(ViewBag.TrangThai == true)">Hoạt động</option>
                         <option value="false" selected="@(ViewBag.TrangThai == false)">Khóa</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Tìm
+                    <label class="form-label small text-muted">Số bản ghi</label>
+                    <select name="pageSize" class="form-select">
+                        <option value="10" selected="@(ViewBag.PageSize == 10)">10</option>
+                        <option value="20" selected="@(ViewBag.PageSize == 20)">20</option>
+                        <option value="50" selected="@(ViewBag.PageSize == 50)">50</option>
+                        <option value="100" selected="@(ViewBag.PageSize == 100)">100</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Tìm kiếm
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card">
+    <!-- Table -->
+    <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <th>Mã TK</th>
+                            <th style="width: 80px;">Mã TK</th>
                             <th>Tên đăng nhập</th>
-                            <th>Vai trò</th>
+                            <th style="width: 120px;">Vai trò</th>
                             <th>Nhân viên</th>
-                            <th>Ngày tạo</th>
-                            <th>Trạng thái</th>
-                            <th>Thao tác</th>
+                            <th style="width: 120px;">Ngày tạo</th>
+                            <th style="width: 100px;" class="text-center">Trạng thái</th>
+                            <th style="width: 200px;" class="text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @if (!Model.Any())
                         {
-                            var nhanVien = item.TaiKhoanNhanViens.FirstOrDefault()?.ThongTinNhanVien;
                             <tr>
-                                <td>@item.MaTK</td>
-                                <td><strong>@item.TenDangNhap</strong></td>
-                                <td><span class="badge bg-coffee">@item.VaiTro</span></td>
-                                <td>
-                                    @if (nhanVien != null)
-                                    {
-                                        <span class="text-success">
-                                            <i class="bi bi-person-check"></i>
-                                            @nhanVien.HoTenNV
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">
-                                            <i class="bi bi-dash-circle"></i>
-                                            Không liên kết
-                                        </span>
-                                    }
-                                </td>
-                                <td>@item.NgayTao.ToString("dd/MM/yyyy")</td>
-                                <td>
-                                    @if (item.TrangThai)
-                                    {
-                                        <span class="badge bg-success">Hoạt động</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Khóa</span>
-                                    }
-                                </td>
-                                <td>
-                                    <a asp-action="Edit" asp-route-id="@item.MaTK" class="btn btn-sm btn-primary" title="Sửa">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="ResetPassword" asp-route-id="@item.MaTK" class="btn btn-sm btn-warning" title="Đặt lại mật khẩu">
-                                        <i class="bi bi-key"></i>
-                                    </a>
-                                    @if (ViewBag.IsAdmin)
-                                    {
-                                        <button type="button" class="btn btn-sm btn-info" onclick="toggleStatus('@item.MaTK')" title="Khóa/Mở">
-                                            <i class="bi bi-toggle-on"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteTaiKhoan('@item.MaTK')" title="Xóa">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    }
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                                    <p class="mt-2 mb-0">Không tìm thấy tài khoản nào</p>
                                 </td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                var nhanVien = item.TaiKhoanNhanViens.FirstOrDefault()?.ThongTinNhanVien;
+                                <tr>
+                                    <td><code>@item.MaTK</code></td>
+                                    <td>
+                                        <strong>@item.TenDangNhap</strong>
+                                    </td>
+                                    <td>
+                                        @{
+                                            var badgeClass = item.VaiTro switch
+                                            {
+                                                "ADMIN" => "bg-danger",
+                                                "QUAN_LY" => "bg-primary",
+                                                "KE_TOAN" => "bg-info",
+                                                "KHO" => "bg-warning",
+                                                _ => "bg-secondary"
+                                            };
+                                            var roleText = item.VaiTro switch
+                                            {
+                                                "QUAN_LY" => "QUẢN LÝ",
+                                                "NHAN_VIEN" => "NHÂN VIÊN",
+                                                "KE_TOAN" => "KẾ TOÁN",
+                                                _ => item.VaiTro
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@roleText</span>
+                                    </td>
+                                    <td>
+                                        @if (nhanVien != null)
+                                        {
+                                            <div>
+                                                <i class="bi bi-person-check text-success"></i>
+                                                <strong>@nhanVien.HoTenNV</strong>
+                                            </div>
+                                            <small class="text-muted">@nhanVien.ChiNhanh?.TenChiNhanh</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                <i class="bi bi-dash-circle"></i>
+                                                Không liên kết
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>@item.NgayTao.ToString("dd/MM/yyyy")</small>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.TrangThai)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Hoạt động
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-lock"></i> Khóa
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-action="Details" asp-route-id="@item.MaTK" 
+                                               class="btn btn-outline-info" title="Xem chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@item.MaTK" 
+                                               class="btn btn-outline-primary" title="Sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a asp-action="ResetPassword" asp-route-id="@item.MaTK" 
+                                               class="btn btn-outline-warning" title="Đặt lại mật khẩu">
+                                                <i class="bi bi-key"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="toggleStatus('@item.MaTK')" 
+                                                    title="@(item.TrangThai ? "Khóa" : "Mở khóa")">
+                                                <i class="bi bi-@(item.TrangThai ? "lock" : "unlock")"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteTaiKhoan('@item.MaTK', '@item.TenDangNhap')" 
+                                                    title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            @if (ViewBag.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation" class="mt-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage - 1)&search=@ViewBag.Search&vaiTro=@ViewBag.VaiTro&trangThai=@ViewBag.TrangThai&pageSize=@ViewBag.PageSize">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@i&search=@ViewBag.Search&vaiTro=@ViewBag.VaiTro&trangThai=@ViewBag.TrangThai&pageSize=@ViewBag.PageSize">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(ViewBag.CurrentPage + 1)&search=@ViewBag.Search&vaiTro=@ViewBag.VaiTro&trangThai=@ViewBag.TrangThai&pageSize=@ViewBag.PageSize">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    <p class="text-center text-muted mt-2 mb-0">
+                        Hiển thị @Model.Count() / @ViewBag.TotalRecords tài khoản
+                    </p>
+                </nav>
+            }
         </div>
     </div>
 </div>
@@ -122,43 +285,77 @@
 @section Scripts {
     <script>
         function toggleStatus(id) {
-            if (confirm('Bạn có chắc muốn thay đổi trạng thái tài khoản?')) {
-                fetch('/TaiKhoan/ToggleStatus?id=' + id, { method: 'POST' })
+            if (confirm('Bạn có chắc muốn thay đổi trạng thái tài khoản này?')) {
+                fetch('/TaiKhoan/ToggleStatus?id=' + id, { 
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showToast(data.message, 'success');
-                        setTimeout(() => location.reload(), 1000);
+                        setTimeout(() => location.reload(), 1500);
                     } else {
                         showToast(data.message, 'error');
                     }
+                })
+                .catch(error => {
+                    showToast('Có lỗi xảy ra: ' + error, 'error');
                 });
             }
         }
 
-        function deleteTaiKhoan(id) {
-            if (confirm('Bạn có chắc muốn xóa tài khoản này? Hành động này không thể hoàn tác!')) {
-                fetch('/TaiKhoan/Delete?id=' + id, { method: 'POST' })
+        function deleteTaiKhoan(id, username) {
+            if (confirm(`Bạn có chắc muốn xóa tài khoản "${username}"?\n\nHành động này không thể hoàn tác!`)) {
+                fetch('/TaiKhoan/Delete?id=' + id, { 
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showToast(data.message, 'success');
-                        setTimeout(() => location.reload(), 1000);
+                        setTimeout(() => location.reload(), 1500);
                     } else {
                         showToast(data.message, 'error');
                     }
+                })
+                .catch(error => {
+                    showToast('Có lỗi xảy ra: ' + error, 'error');
                 });
             }
         }
 
         function showToast(message, type) {
-            // Simple toast notification
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            
             const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 m-3`;
-            toast.style.zIndex = '9999';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 150);
+            }, 3000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            document.body.appendChild(container);
+            return container;
         }
     </script>
 }

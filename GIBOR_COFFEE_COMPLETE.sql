@@ -2206,6 +2206,114 @@ INSERT INTO dbo.ChiNhanh (MaChiNhanh, MaKhuVuc, TenChiNhanh, SoDienThoai, DiaChi
     ('CN00000050', 'KV00000050', N'GIBOR Coffee Nghệ An Vinh', '0995004803', N'40 Hai Bà Trưng, Vinh, Nghệ An', 1, '2019-03-11');
 GO
 
+-- =============================================
+-- PHẦN 7: NHÀ CUNG CẤP VÀ NGUYÊN LIỆU
+-- =============================================
+PRINT '';
+PRINT 'PHẦN 7: Thêm nhà cung cấp và nguyên liệu...';
+
+-- Thêm 10 nhà cung cấp
+INSERT INTO dbo.NhaCungCap (MaNCC, TenNCC, DienThoai, DiaChi, Email, TrangThai) VALUES
+    ('NCC0000001', N'Công ty Cà phê Trung Nguyên', '0901234567', N'123 Lê Lợi, Quận 1, TP.HCM', 'trungnguyen@coffee.vn', N'Đang hợp tác'),
+    ('NCC0000002', N'Công ty Sữa TH True Milk', '0902345678', N'456 Nguyễn Huệ, Quận 1, TP.HCM', 'contact@thmilk.vn', N'Đang hợp tác'),
+    ('NCC0000003', N'Công ty Đường Biên Hòa', '0903456789', N'789 Trần Hưng Đạo, Biên Hòa, Đồng Nai', 'bienhoa@sugar.vn', N'Đang hợp tác'),
+    ('NCC0000004', N'Công ty Trà Lipton Việt Nam', '0904567890', N'321 Hai Bà Trưng, Quận 3, TP.HCM', 'lipton@tea.vn', N'Đang hợp tác'),
+    ('NCC0000005', N'Công ty Socola Pheva', '0905678901', N'654 Lý Thường Kiệt, Quận 10, TP.HCM', 'pheva@chocolate.vn', N'Đang hợp tác'),
+    ('NCC0000006', N'Công ty Bánh Kinh Đô', '0906789012', N'987 Cách Mạng Tháng 8, Quận 3, TP.HCM', 'kinhdo@bakery.vn', N'Đang hợp tác'),
+    ('NCC0000007', N'Công ty Trái cây Đà Lạt', '0907890123', N'147 Nguyễn Văn Linh, Đà Lạt, Lâm Đồng', 'dalat@fruits.vn', N'Đang hợp tác'),
+    ('NCC0000008', N'Công ty Kem Vinamilk', '0908901234', N'258 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM', 'vinamilk@icecream.vn', N'Đang hợp tác'),
+    ('NCC0000009', N'Công ty Hương liệu Việt Nam', '0909012345', N'369 Võ Văn Tần, Quận 3, TP.HCM', 'flavor@vietnam.vn', N'Đang hợp tác'),
+    ('NCC0000010', N'Công ty Bao bì Tân Tiến', '0900123456', N'741 Lê Văn Việt, Quận 9, TP.HCM', 'tantien@packaging.vn', N'Đang hợp tác');
+GO
+
+-- Thêm 50 nguyên liệu
+PRINT 'Thêm 50 nguyên liệu...';
+
+-- Cà phê (5 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000001', N'Cà phê hạt Arabica', N'kg', 250000, 'NCC0000001', 0, N'Đang sử dụng'),
+    ('NL00000002', N'Cà phê hạt Robusta', N'kg', 180000, 'NCC0000001', 0, N'Đang sử dụng'),
+    ('NL00000003', N'Cà phê bột Espresso', N'kg', 220000, 'NCC0000001', 0, N'Đang sử dụng'),
+    ('NL00000004', N'Cà phê hòa tan', N'kg', 150000, 'NCC0000001', 0, N'Đang sử dụng'),
+    ('NL00000005', N'Cà phê Cold Brew', N'lít', 200000, 'NCC0000001', 1, N'Đang sử dụng');
+GO
+
+-- Sữa (8 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000006', N'Sữa tươi nguyên chất', N'lít', 35000, 'NCC0000002', 1, N'Đang sử dụng'),
+    ('NL00000007', N'Sữa đặc có đường', N'lon', 18000, 'NCC0000002', 0, N'Đang sử dụng'),
+    ('NL00000008', N'Sữa đặc không đường', N'lon', 20000, 'NCC0000002', 0, N'Đang sử dụng'),
+    ('NL00000009', N'Sữa dừa', N'lít', 45000, 'NCC0000002', 1, N'Đang sử dụng'),
+    ('NL00000010', N'Sữa hạnh nhân', N'lít', 55000, 'NCC0000002', 1, N'Đang sử dụng'),
+    ('NL00000011', N'Sữa yến mạch', N'lít', 50000, 'NCC0000002', 1, N'Đang sử dụng'),
+    ('NL00000012', N'Kem sữa tươi', N'lít', 80000, 'NCC0000002', 1, N'Đang sử dụng'),
+    ('NL00000013', N'Sữa chua', N'kg', 40000, 'NCC0000002', 1, N'Đang sử dụng');
+GO
+
+-- Đường và chất ngọt (5 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000014', N'Đường trắng', N'kg', 18000, 'NCC0000003', 0, N'Đang sử dụng'),
+    ('NL00000015', N'Đường nâu', N'kg', 22000, 'NCC0000003', 0, N'Đang sử dụng'),
+    ('NL00000016', N'Đường đen', N'kg', 25000, 'NCC0000003', 0, N'Đang sử dụng'),
+    ('NL00000017', N'Mật ong', N'kg', 120000, 'NCC0000003', 0, N'Đang sử dụng'),
+    ('NL00000018', N'Syrup caramel', N'lít', 85000, 'NCC0000003', 0, N'Đang sử dụng');
+GO
+
+-- Trà (6 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000019', N'Trà đen', N'kg', 180000, 'NCC0000004', 0, N'Đang sử dụng'),
+    ('NL00000020', N'Trà xanh', N'kg', 200000, 'NCC0000004', 0, N'Đang sử dụng'),
+    ('NL00000021', N'Trà ô long', N'kg', 250000, 'NCC0000004', 0, N'Đang sử dụng'),
+    ('NL00000022', N'Trà sen', N'kg', 280000, 'NCC0000004', 0, N'Đang sử dụng'),
+    ('NL00000023', N'Bột matcha', N'kg', 450000, 'NCC0000004', 0, N'Đang sử dụng'),
+    ('NL00000024', N'Trà hoa cúc', N'kg', 150000, 'NCC0000004', 0, N'Đang sử dụng');
+GO
+
+-- Socola và bột (4 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000025', N'Bột socola đen', N'kg', 180000, 'NCC0000005', 0, N'Đang sử dụng'),
+    ('NL00000026', N'Bột socola sữa', N'kg', 160000, 'NCC0000005', 0, N'Đang sử dụng'),
+    ('NL00000027', N'Socola chip', N'kg', 200000, 'NCC0000005', 0, N'Đang sử dụng'),
+    ('NL00000028', N'Bột ca cao', N'kg', 140000, 'NCC0000005', 0, N'Đang sử dụng');
+GO
+
+-- Trái cây (8 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000029', N'Dâu tây tươi', N'kg', 120000, 'NCC0000007', 1, N'Đang sử dụng'),
+    ('NL00000030', N'Việt quất đông lạnh', N'kg', 180000, 'NCC0000007', 1, N'Đang sử dụng'),
+    ('NL00000031', N'Xoài cắt lát', N'kg', 80000, 'NCC0000007', 1, N'Đang sử dụng'),
+    ('NL00000032', N'Đào đóng hộp', N'hộp', 35000, 'NCC0000007', 0, N'Đang sử dụng'),
+    ('NL00000033', N'Vải đóng hộp', N'hộp', 32000, 'NCC0000007', 0, N'Đang sử dụng'),
+    ('NL00000034', N'Chanh tươi', N'kg', 25000, 'NCC0000007', 1, N'Đang sử dụng'),
+    ('NL00000035', N'Cam tươi', N'kg', 30000, 'NCC0000007', 1, N'Đang sử dụng'),
+    ('NL00000036', N'Dưa hấu', N'kg', 15000, 'NCC0000007', 1, N'Đang sử dụng');
+GO
+
+-- Topping và phụ liệu (8 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000037', N'Trân châu đen', N'kg', 45000, 'NCC0000006', 0, N'Đang sử dụng'),
+    ('NL00000038', N'Trân châu trắng', N'kg', 42000, 'NCC0000006', 0, N'Đang sử dụng'),
+    ('NL00000039', N'Thạch rau câu', N'kg', 35000, 'NCC0000006', 1, N'Đang sử dụng'),
+    ('NL00000040', N'Pudding trứng', N'kg', 55000, 'NCC0000006', 1, N'Đang sử dụng'),
+    ('NL00000041', N'Kem cheese', N'kg', 95000, 'NCC0000008', 1, N'Đang sử dụng'),
+    ('NL00000042', N'Whipping cream', N'lít', 120000, 'NCC0000008', 1, N'Đang sử dụng'),
+    ('NL00000043', N'Bột rắc cookies', N'kg', 75000, 'NCC0000006', 0, N'Đang sử dụng'),
+    ('NL00000044', N'Hạt hạnh nhân rang', N'kg', 280000, 'NCC0000006', 0, N'Đang sử dụng');
+GO
+
+-- Hương liệu và gia vị (6 loại)
+INSERT INTO dbo.NguyenLieu (MaNguyenLieu, TenNguyenLieu, DonViTinh, GiaNhap, MaNCC, CoHanSuDung, TrangThai) VALUES
+    ('NL00000045', N'Vanilla extract', N'chai', 65000, 'NCC0000009', 0, N'Đang sử dụng'),
+    ('NL00000046', N'Bột quế', N'kg', 180000, 'NCC0000009', 0, N'Đang sử dụng'),
+    ('NL00000047', N'Muối biển', N'kg', 25000, 'NCC0000009', 0, N'Đang sử dụng'),
+    ('NL00000048', N'Sả tươi', N'kg', 30000, 'NCC0000009', 1, N'Đang sử dụng'),
+    ('NL00000049', N'Bạc hà tươi', N'kg', 40000, 'NCC0000009', 1, N'Đang sử dụng'),
+    ('NL00000050', N'Gừng tươi', N'kg', 35000, 'NCC0000009', 1, N'Đang sử dụng');
+GO
+
+PRINT '  ✓ Đã thêm 10 nhà cung cấp và 50 nguyên liệu';
+GO
+
 INSERT INTO dbo.ChucVuNhanVien (MaChucVu, TenChucVu, LuongCoBanGio) VALUES
 ('CV01', N'ADMIN', 500000)
 GO
@@ -2983,16 +3091,126 @@ PRINT '========================================';
 GO
 
 -- =============================================
--- KẾT THÚC FILE SQL
+-- PHẦN 9: DỮ LIỆU BỔ SUNG
 -- =============================================
+
+-- =============================================
+-- BƯỚC 1: Thêm 50 khách hàng
+-- =============================================
+PRINT '';
+PRINT 'PHẦN 9: Thêm dữ liệu bổ sung...';
+PRINT 'Thêm 50 khách hàng...';
+
+INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
+    ('KH0001', N'Nguyễn Văn An', '0901234567', 150),
+    ('KH0002', N'Trần Thị Bình', '0902345678', 280),
+    ('KH0003', N'Lê Hoàng Cường', '0903456789', 420),
+    ('KH0004', N'Phạm Thị Dung', '0904567890', 95),
+    ('KH0005', N'Hoàng Văn Em', '0905678901', 310),
+    ('KH0006', N'Đặng Thị Phương', '0906789012', 560),
+    ('KH0007', N'Vũ Văn Giang', '0907890123', 180),
+    ('KH0008', N'Bùi Thị Hà', '0908901234', 720),
+    ('KH0009', N'Đỗ Văn Hùng', '0909012345', 240),
+    ('KH0010', N'Ngô Thị Lan', '0910123456', 890);
+GO
+
+INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
+    ('KH0011', N'Phan Văn Khoa', '0911234567', 125),
+    ('KH0012', N'Lý Thị Linh', '0912345678', 340),
+    ('KH0013', N'Trương Văn Minh', '0913456789', 470),
+    ('KH0014', N'Võ Thị Nga', '0914567890', 210),
+    ('KH0015', N'Đinh Văn Phúc', '0915678901', 580),
+    ('KH0016', N'Mai Thị Quỳnh', '0916789012', 390),
+    ('KH0017', N'Dương Văn Sơn', '0917890123', 650),
+    ('KH0018', N'Tô Thị Tâm', '0918901234', 170),
+    ('KH0019', N'Lâm Văn Tùng', '0919012345', 820),
+    ('KH0020', N'Hồ Thị Uyên', '0920123456', 290);
+GO
+
+INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
+    ('KH0021', N'Cao Văn Vinh', '0921234567', 440),
+    ('KH0022', N'Huỳnh Thị Xuân', '0922345678', 510),
+    ('KH0023', N'Tạ Văn Yên', '0923456789', 195),
+    ('KH0024', N'Lưu Thị Ánh', '0924567890', 670),
+    ('KH0025', N'Hà Văn Bảo', '0925678901', 320),
+    ('KH0026', N'Đoàn Thị Chi', '0926789012', 750),
+    ('KH0027', N'Trịnh Văn Đức', '0927890123', 230),
+    ('KH0028', N'Ông Thị Hoa', '0928901234', 880),
+    ('KH0029', N'Tăng Văn Khang', '0929012345', 360),
+    ('KH0030', N'Quách Thị Loan', '0930123456', 490);
+GO
+
+INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
+    ('KH0031', N'Nghiêm Văn Nam', '0931234567', 610),
+    ('KH0032', N'Ứng Thị Oanh', '0932345678', 140),
+    ('KH0033', N'Từ Văn Phong', '0933456789', 790),
+    ('KH0034', N'Lục Thị Quế', '0934567890', 270),
+    ('KH0035', N'Bạch Văn Sáng', '0935678901', 530),
+    ('KH0036', N'Thái Thị Thảo', '0936789012', 410),
+    ('KH0037', N'Khương Văn Tuấn', '0937890123', 690),
+    ('KH0038', N'Ân Thị Vân', '0938901234', 200),
+    ('KH0039', N'Lạc Văn Xuân', '0939012345', 840),
+    ('KH0040', N'Mạc Thị Yến', '0940123456', 310);
+GO
+
+INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy) VALUES
+    ('KH0041', N'Gia Văn An', '0941234567', 460),
+    ('KH0042', N'Kiều Thị Bích', '0942345678', 570),
+    ('KH0043', N'Lương Văn Cường', '0943456789', 220),
+    ('KH0044', N'Mã Thị Diệu', '0944567890', 710),
+    ('KH0045', N'Nhữ Văn Hải', '0945678901', 350),
+    ('KH0046', N'Ô Thị Khánh', '0946789012', 620),
+    ('KH0047', N'Phùng Văn Long', '0947890123', 180),
+    ('KH0048', N'Quang Thị Mai', '0948901234', 770),
+    ('KH0049', N'Sử Văn Nhân', '0949012345', 390),
+    ('KH0050', N'Thi Thị Phương', '0950123456', 540);
+GO
+
+PRINT '  ✓ Đã thêm 50 khách hàng';
+GO
+
+-- =============================================
+-- BƯỚC 2: Thêm 50 ngày đặc biệt
+-- =============================================
+PRINT 'Thêm 50 ngày đặc biệt...';
+
+-- Đã có 50 ngày đặc biệt từ dòng 2581-2640
+-- Không cần thêm nữa
+
+PRINT '  ✓ Đã có 50 ngày đặc biệt';
+GO
+
+PRINT '';
+PRINT '========================================';
+PRINT '✅ HOÀN THÀNH THÊM DỮ LIỆU BỔ SUNG';
+PRINT '========================================';
+GO
+
 PRINT '';
 PRINT '========================================';
 PRINT '✅ HOÀN THÀNH TẠO DATABASE GIBOR COFFEE';
 PRINT '========================================';
 PRINT '';
 PRINT 'Database đã sẵn sàng sử dụng!';
-PRINT 'Bạn có thể đăng nhập với:';
-PRINT '  - Username: admin';
-PRINT '  - Password: admin123';
+PRINT '';
+PRINT '📌 HƯỚNG DẪN TIẾP THEO:';
+PRINT '  1. Nếu muốn thêm dữ liệu đơn hàng mẫu (50 đơn hàng):';
+PRINT '     → Chạy file: INSERT_DON_HANG.sql';
+PRINT '';
+PRINT '  2. Đăng nhập hệ thống với:';
+PRINT '     - Username: admin';
+PRINT '     - Password: admin123';
+PRINT '';
+PRINT '📊 THỐNG KÊ DỮ LIỆU:';
+PRINT '  - 50 Chi nhánh';
+PRINT '  - 50 Nhân viên';
+PRINT '  - 50 Khách hàng';
+PRINT '  - 10 Nhà cung cấp';
+PRINT '  - 50 Nguyên liệu';
+PRINT '  - 5 Danh mục';
+PRINT '  - 50 Sản phẩm';
+PRINT '  - 134 Biến thể';
+PRINT '  - 50 Ca làm việc';
+PRINT '  - 50 Ngày đặc biệt';
 GO
 

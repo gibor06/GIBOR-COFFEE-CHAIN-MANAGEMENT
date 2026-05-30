@@ -38,6 +38,13 @@
                     <span>Chi nhánh</span>
                 </a>
             </li>
+
+            <li class="@activeByController("TaiKhoan")">
+                <a asp-controller="TaiKhoan" asp-action="Index">
+                    <i class="bi bi-person-badge"></i>
+                    <span>Quản lý tài khoản</span>
+                </a>
+            </li>
         }
 
         @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")

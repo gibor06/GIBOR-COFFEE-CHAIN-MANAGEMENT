@@ -260,15 +260,16 @@
             <h2><i class="bi bi-menu-button-wide-fill"></i> Menu Sản phẩm GIBOR Coffee</h2>
             @if (Model.Any())
             {
-                var totalItems = Model.Count();
-                var branches = Model.Select(m => m.MaChiNhanh).Distinct().Count();
+                var totalProducts = Model.Select(m => m.TenSanPham).Distinct().Count();
+                var totalVariants = Model.Count();
                 var categories = Model.Select(m => m.TenDanhMuc).Distinct().Count();
+                var branchName = Model.First().TenChiNhanh;
                 <div class="menu-stats">
                     <div class="stat-item">
-                        <i class="bi bi-shop-window"></i> <strong>@branches</strong> chi nhánh
+                        <i class="bi bi-shop-window"></i> <strong>@branchName</strong>
                     </div>
                     <div class="stat-item">
-                        <i class="bi bi-cup-hot-fill"></i> <strong>@totalItems</strong> món
+                        <i class="bi bi-cup-hot-fill"></i> <strong>@totalProducts</strong> sản phẩm
                     </div>
                     <div class="stat-item">
                         <i class="bi bi-grid-3x3-gap-fill"></i> <strong>@categories</strong> danh mục
@@ -281,6 +282,7 @@
             <form method="get" class="row g-3 align-items-end">
                 @if (ViewBag.CurrentVaiTro == "QUAN_LY" || ViewBag.CurrentVaiTro == "NHAN_VIEN")
                 {
+                    <!-- Nhân viên/Quản lý: Hiển thị chi nhánh cố định -->
                     var currentBranch = (ViewBag.ChiNhanhs as List<ChiNhanh>)?.FirstOrDefault(c => c.MaChiNhanh == ViewBag.CurrentMaChiNhanh);
                     <div class="col-md-8">
                         <div class="branch-name">
@@ -289,18 +291,13 @@
                         </div>
                         <input type="hidden" name="chiNhanh" value="@ViewBag.CurrentMaChiNhanh" />
                     </div>
-                    <div class="col-md-4 text-end">
-                        <a asp-action="Index" class="btn btn-back">
-                            <i class="bi bi-arrow-left-circle"></i> Quay lại quản lý
-                        </a>
-                    </div>
                 }
                 else
                 {
+                    <!-- Admin: Hiển thị combobox chọn chi nhánh -->
                     <div class="col-md-8">
                         <label class="form-label fw-bold"><i class="bi bi-shop"></i> Chọn chi nhánh</label>
                         <select name="chiNhanh" class="form-select form-select-lg">
-                            <option value="">-- Tất cả chi nhánh --</option>
                             @foreach (var cn in ViewBag.ChiNhanhs as List<ChiNhanh>)
                             {
                                 <option value="@cn.MaChiNhanh" selected="@(ViewBag.ChiNhanh == cn.MaChiNhanh)">
@@ -323,93 +320,88 @@
 
         @if (Model.Any())
         {
-            var groupedByBranch = Model.GroupBy(m => new { m.MaChiNhanh, m.TenChiNhanh }).OrderBy(g => g.Key.TenChiNhanh);
+            <!-- Hiển thị menu của 1 chi nhánh duy nhất -->
+            var branchName = Model.First().TenChiNhanh;
+            var categoriesInBranch = Model.GroupBy(m => m.TenDanhMuc).OrderBy(g => g.Key);
             
-            @foreach (var branchGroup in groupedByBranch)
-            {
-                <div class="branch-section mb-5">
-                    <div class="branch-section-header">
-                        <h3>
-                            <i class="bi bi-shop-window"></i>
-                            GIBOR Coffee @branchGroup.Key.TenChiNhanh
-                            <span class="badge bg-light text-dark ms-2">@branchGroup.Count() món</span>
-                        </h3>
-                    </div>
-                    
-                    @{
-                        var categoriesInBranch = branchGroup.GroupBy(m => m.TenDanhMuc).OrderBy(g => g.Key);
-                    }
-                    
-                    @foreach (var categoryGroup in categoriesInBranch)
-                    {
-                        <div class="category-section">
-                            <div class="category-header">
-                                <h5>
-                                    <i class="bi bi-cup-hot-fill"></i>
-                                    @categoryGroup.Key
-                                    <span class="badge bg-light text-dark ms-2">@categoryGroup.Select(x => x.TenSanPham).Distinct().Count() món</span>
-                                </h5>
-                            </div>
-                            <div class="row g-4">
-                                @{
-                                    var productsInCategory = categoryGroup.GroupBy(m => m.TenSanPham).OrderBy(g => g.Key);
-                                }
-                                @foreach (var productGroup in productsInCategory)
-                                {
-                                    var sizes = productGroup.OrderBy(p => p.Size).ToList();
-                                    var firstItem = sizes.First();
-                                    
-                                    <div class="col-xl-3 col-lg-4 col-md-6">
-                                        <div class="menu-item-card">
-                                            <div class="menu-item-image">
-                                                <i class="bi bi-cup-hot-fill"></i>
+            <div class="branch-section mb-5">                
+                @foreach (var categoryGroup in categoriesInBranch)
+                {
+                    <div class="category-section">
+                        <div class="category-header">
+                            <h5>
+                                <i class="bi bi-cup-hot-fill"></i>
+                                @categoryGroup.Key
+                                <span class="badge bg-light text-dark ms-2">@categoryGroup.Select(x => x.TenSanPham).Distinct().Count() món</span>
+                            </h5>
+                        </div>
+                        <div class="row g-4">
+                            @{
+                                var productsInCategory = categoryGroup.GroupBy(m => m.TenSanPham).OrderBy(g => g.Key);
+                            }
+                            @foreach (var productGroup in productsInCategory)
+                            {
+                                var sizes = productGroup.OrderBy(p => p.Size).ToList();
+                                var firstItem = sizes.First();
+                                
+                                <div class="col-xl-3 col-lg-4 col-md-6">
+                                    <div class="menu-item-card">
+                                        <div class="menu-item-image">
+                                            <i class="bi bi-cup-hot-fill"></i>
+                                        </div>
+                                        <div class="menu-item-body">
+                                            <div class="menu-item-name">
+                                                @productGroup.Key
                                             </div>
-                                            <div class="menu-item-body">
-                                                <div class="menu-item-name">
-                                                    @productGroup.Key
-                                                </div>
-                                                
-                                                <div class="size-options mb-3">
-                                                    @foreach (var sizeItem in sizes)
-                                                    {
-                                                        <div class="size-option">
-                                                            <div class="size-label">
-                                                                <i class="bi bi-cup"></i>
-                                                                <span class="size-name">@sizeItem.Size</span>
-                                                            </div>
-                                                            <div class="size-price">
-                                                                @sizeItem.GiaBanThucTe?.ToString("N0") đ
-                                                            </div>
+                                            
+                                            <div class="size-options mb-3">
+                                                @foreach (var sizeItem in sizes)
+                                                {
+                                                    <div class="size-option">
+                                                        <div class="size-label">
+                                                            <i class="bi bi-cup"></i>
+                                                            <span class="size-name">@sizeItem.Size</span>
                                                         </div>
-                                                    }
-                                                </div>
-                                                
-                                                <div class="menu-item-status @(firstItem.TrangThaiMenu == true ? "status-available" : "status-unavailable")">
-                                                    @if (firstItem.TrangThaiMenu == true)
-                                                    {
-                                                        <i class="bi bi-check-circle-fill"></i> <span>Còn hàng</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <i class="bi bi-x-circle-fill"></i> <span>Hết hàng</span>
-                                                    }
-                                                </div>
+                                                        <div class="size-price">
+                                                            @sizeItem.GiaBanThucTe?.ToString("N0") đ
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                            
+                                            <div class="menu-item-status @(firstItem.TrangThaiMenu == true ? "status-available" : "status-unavailable")">
+                                                @if (firstItem.TrangThaiMenu == true)
+                                                {
+                                                    <i class="bi bi-check-circle-fill"></i> <span>Còn hàng</span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-x-circle-fill"></i> <span>Hết hàng</span>
+                                                }
                                             </div>
                                         </div>
                                     </div>
-                                }
-                            </div>
+                                </div>
+                            }
                         </div>
-                    }
-                </div>
-            }
+                    </div>
+                }
+            </div>
         }
         else
         {
             <div class="empty-menu">
                 <i class="bi bi-inbox"></i>
-                <h4>Chưa có sản phẩm nào trong menu</h4>
-                <p class="text-muted">Vui lòng chọn chi nhánh hoặc thêm sản phẩm vào hệ thống</p>
+                @if (ViewBag.ChiNhanh == null)
+                {
+                    <h4>Không có chi nhánh nào trong hệ thống</h4>
+                    <p class="text-muted">Vui lòng thêm chi nhánh trước khi xem menu</p>
+                }
+                else
+                {
+                    <h4>Chưa có sản phẩm nào trong menu</h4>
+                    <p class="text-muted">Chi nhánh này chưa có sản phẩm hoặc tất cả sản phẩm đang tạm ngưng</p>
+                }
                 <a asp-action="Index" class="btn btn-back mt-3">
                     <i class="bi bi-arrow-left-circle"></i> Quay lại quản lý sản phẩm
                 </a>
