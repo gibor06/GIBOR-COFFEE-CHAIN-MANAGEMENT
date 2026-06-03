@@ -155,9 +155,12 @@
                 <a asp-action="Menu" class="btn btn-info-custom">
                     <i class="bi bi-menu-button-wide"></i> Xem Menu
                 </a>
-                <a asp-action="Create" class="btn btn-coffee-custom">
-                    <i class="bi bi-plus-circle"></i> Thêm sản phẩm
-                </a>
+                @if (ViewBag.IsAdmin == true)
+                {
+                    <a asp-action="Create" class="btn btn-coffee-custom">
+                        <i class="bi bi-plus-circle"></i> Thêm sản phẩm
+                    </a>
+                }
             </div>
         </div>
     </div>
@@ -263,9 +266,12 @@
                     <i class="bi bi-inbox"></i>
                     <h4>Không tìm thấy sản phẩm nào</h4>
                     <p>Thử thay đổi bộ lọc hoặc thêm sản phẩm mới</p>
-                    <a asp-action="Create" class="btn btn-coffee-custom mt-3">
-                        <i class="bi bi-plus-circle"></i> Thêm sản phẩm đầu tiên
-                    </a>
+                    @if (ViewBag.IsAdmin == true)
+                    {
+                        <a asp-action="Create" class="btn btn-coffee-custom mt-3">
+                            <i class="bi bi-plus-circle"></i> Thêm sản phẩm đầu tiên
+                        </a>
+                    }
                 </div>
             </div>
         </div>

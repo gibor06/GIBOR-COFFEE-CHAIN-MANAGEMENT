@@ -1,6 +1,9 @@
-@model SanPham
+@model SanPhamCreateViewModel
 @{
     ViewData["Title"] = "Thêm Sản phẩm";
+
+    var chiNhanhs = ViewBag.ChiNhanhs as List<ChiNhanh> ?? new List<ChiNhanh>();
+    var selectedChiNhanhs = Model.MaChiNhanhs ?? new List<string>();
 }
 
 <div class="container-fluid p-4">
@@ -12,12 +15,12 @@
             {
                 <div class="alert alert-danger">@TempData["Error"]</div>
             }
-            
+
             @if (TempData["Success"] != null)
             {
                 <div class="alert alert-success">@TempData["Success"]</div>
             }
-            
+
             @if (!ViewData.ModelState.IsValid)
             {
                 <div class="alert alert-danger">
@@ -30,9 +33,10 @@
                     </ul>
                 </div>
             }
-            
+
             <form asp-action="Create" method="post" novalidate>
                 @Html.AntiForgeryToken()
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label asp-for="TenSanPham" class="form-label">Tên sản phẩm</label>
@@ -41,26 +45,103 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label asp-for="MaDanhMuc" class="form-label">Danh mục</label>
-                        <select asp-for="MaDanhMuc" class="form-select" asp-items="ViewBag.DanhMucs"></select>
+                        <select asp-for="MaDanhMuc" class="form-select" asp-items="ViewBag.DanhMucs">
+                            <option value="">-- Chọn danh mục --</option>
+                        </select>
                         <span asp-validation-for="MaDanhMuc" class="text-danger"></span>
                     </div>
                 </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Giá theo size</label>
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="input-group">
+                                <span class="input-group-text">Nhỏ</span>
+                                <input asp-for="GiaSizeNho" type="number" min="1" step="1000" class="form-control" />
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <span asp-validation-for="GiaSizeNho" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="input-group">
+                                <span class="input-group-text">Vừa</span>
+                                <input asp-for="GiaSizeVua" type="number" min="1" step="1000" class="form-control" />
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <span asp-validation-for="GiaSizeVua" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">Lớn</span>
+                                <input asp-for="GiaSizeLon" type="number" min="1" step="1000" class="form-control" />
+                                <span class="input-group-text">đ</span>
+                            </div>
+                            <span asp-validation-for="GiaSizeLon" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Chi nhánh bán sản phẩm</label>
+                        @if (chiNhanhs.Any())
+                        {
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary" onclick="setBranchSelection(true)">
+                                    <i class="bi bi-check2-square"></i> Chọn tất cả
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setBranchSelection(false)">
+                                    <i class="bi bi-square"></i> Bỏ chọn
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    @if (chiNhanhs.Any())
+                    {
+                        <div class="row">
+                            @foreach (var chiNhanh in chiNhanhs)
+                            {
+                                var isSelected = selectedChiNhanhs.Contains(chiNhanh.MaChiNhanh);
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check border rounded p-3 ps-5 h-100">
+                                        <input class="form-check-input branch-checkbox"
+                                               type="checkbox"
+                                               name="MaChiNhanhs"
+                                               value="@chiNhanh.MaChiNhanh"
+                                               id="branch_@chiNhanh.MaChiNhanh"
+                                               checked="@isSelected" />
+                                        <label class="form-check-label" for="branch_@chiNhanh.MaChiNhanh">
+                                            <strong>@chiNhanh.TenChiNhanh</strong>
+                                            <span class="d-block text-muted small">@chiNhanh.DiaChi</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning mb-0">Chưa có chi nhánh đang hoạt động.</div>
+                    }
+                    @Html.ValidationMessageFor(m => m.MaChiNhanhs, "", new { @class = "text-danger d-block" })
+                </div>
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label asp-for="GiaCoBan" class="form-label">Giá cơ bản</label>
-                        <input asp-for="GiaCoBan" type="number" step="1000" class="form-control" />
-                        <span asp-validation-for="GiaCoBan" class="text-danger"></span>
+                        <label asp-for="MoTa" class="form-label">Mô tả</label>
+                        <textarea asp-for="MoTa" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="MoTa" class="text-danger"></span>
                     </div>
-                    <div class="col-md-6 mb-3 form-check mt-4">
-                        <input asp-for="TrangThai" class="form-check-input" checked />
-                        <label asp-for="TrangThai" class="form-check-label">Đang bán</label>
+                    <div class="col-md-6 mb-3 d-flex align-items-center">
+                        <div class="form-check mt-3">
+                            <input asp-for="TrangThai" class="form-check-input" />
+                            <label asp-for="TrangThai" class="form-check-label">Đang bán</label>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label asp-for="MoTa" class="form-label">Mô tả</label>
-                    <textarea asp-for="MoTa" class="form-control" rows="3"></textarea>
-                    <span asp-validation-for="MoTa" class="text-danger"></span>
-                </div>
+
                 <button type="submit" class="btn btn-coffee">
                     <i class="bi bi-save"></i> Lưu
                 </button>
@@ -72,8 +153,12 @@
     </div>
 </div>
 
-@* Tạm thời comment validation scripts do CDN bị chặn
 @section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        function setBranchSelection(isChecked) {
+            document.querySelectorAll('.branch-checkbox').forEach(function (checkbox) {
+                checkbox.checked = isChecked;
+            });
+        }
+    </script>
 }
-*@
