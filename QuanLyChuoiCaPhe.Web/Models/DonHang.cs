@@ -26,6 +26,16 @@ namespace QuanLyChuoiCaPhe.Web.Models
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal GiamGia { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal GiamGiaThuCong { get; set; }
+
+        public int DiemSuDung { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TienGiamTuDiem { get; set; }
+
+        public int DiemCong { get; set; }
         
         [Required]
         [StringLength(30)]

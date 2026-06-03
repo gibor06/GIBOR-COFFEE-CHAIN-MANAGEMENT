@@ -2,6 +2,7 @@
 @model DonHang
 @{
     ViewData["Title"] = "Chi tiết Đơn hàng";
+    var thanhTien = Model.TongTien - Model.GiamGia;
 }
 
 <div class="container-fluid p-4">
@@ -70,12 +71,28 @@
                             <td class="text-end">@Model.TongTien.ToString("N0") đ</td>
                         </tr>
                         <tr>
-                            <th>Giảm giá:</th>
-                            <td class="text-end text-danger">-@Model.GiamGia.ToString("N0") đ</td>
+                            <th>Giảm giá thủ công:</th>
+                            <td class="text-end text-danger">@Model.GiamGiaThuCong.ToString("N0") đ</td>
+                        </tr>
+                        <tr>
+                            <th>Điểm sử dụng:</th>
+                            <td class="text-end">@Model.DiemSuDung điểm</td>
+                        </tr>
+                        <tr>
+                            <th>Tiền giảm từ điểm:</th>
+                            <td class="text-end text-danger">@Model.TienGiamTuDiem.ToString("N0") đ</td>
+                        </tr>
+                        <tr>
+                            <th>Tổng giảm giá:</th>
+                            <td class="text-end text-danger">@Model.GiamGia.ToString("N0") đ</td>
+                        </tr>
+                        <tr>
+                            <th>Điểm được cộng:</th>
+                            <td class="text-end text-success">@Model.DiemCong điểm</td>
                         </tr>
                         <tr class="border-top">
                             <th><h5>Thành tiền:</h5></th>
-                            <td class="text-end"><h5 class="text-success">@((Model.TongTien - Model.GiamGia).ToString("N0")) đ</h5></td>
+                            <td class="text-end"><h5 class="text-success">@thanhTien.ToString("N0") đ</h5></td>
                         </tr>
                     </table>
                 </div>

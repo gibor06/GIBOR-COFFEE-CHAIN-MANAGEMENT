@@ -58,6 +58,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 query = query.Where(d => d.MaChiNhanh == chiNhanhFilter);
             }
 
+            if (CurrentVaiTro == "NHAN_VIEN" && !string.IsNullOrWhiteSpace(CurrentMaNV))
+            {
+                query = query.Where(d => d.MaNV == CurrentMaNV);
+            }
+
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(d => d.MaDH.Contains(search));
@@ -194,6 +199,12 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             var accessCheck = CheckChiNhanhAccess(donHang.MaChiNhanh);
             if (accessCheck != null) return accessCheck;
 
+            if (!CanAccessOrder(donHang))
+            {
+                TempData["Error"] = "Bạn không có quyền truy cập đơn hàng này!";
+                return RedirectToAction(nameof(Index));
+            }
+
             return View(donHang);
         }
 
@@ -229,7 +240,24 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             ViewBag.ChiNhanhs = new SelectList(await chiNhanhsQuery.ToListAsync(), "MaChiNhanh", "TenChiNhanh");
             ViewBag.NhanViens = new SelectList(await nhanViensQuery.ToListAsync(), "MaNV", "HoTenNV");
-            ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
+            ViewBag.KhachHangs = new SelectList(
+                await _context.KhachHangs
+                    .AsNoTracking()
+                    .OrderBy(kh => kh.TenKH)
+                    .ToListAsync(),
+                "MaKH",
+                "TenKH");
+            ViewBag.KhachHangInfos = await _context.KhachHangs
+                .AsNoTracking()
+                .OrderBy(kh => kh.TenKH)
+                .Select(kh => new
+                {
+                    kh.MaKH,
+                    kh.TenKH,
+                    kh.SoDienThoai,
+                    kh.DiemTichLuy
+                })
+                .ToListAsync();
             
             // Chỉ lấy biến thể thuộc menu/sản phẩm của chi nhánh hiện tại
             var bienThes = await _context.BienTheSanPhams
@@ -272,6 +300,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
                 // Kiểm tra quyền truy cập
                 if (!CanAccessChiNhanh(donHang.MaChiNhanh))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền thao tác đơn hàng này!" });
+                }
+
+                if (!CanAccessOrder(donHang))
                 {
                     return Json(new { success = false, message = "Bạn không có quyền thao tác đơn hàng này!" });
                 }
@@ -331,6 +364,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     return Json(new { success = false, message = "Bạn không có quyền thao tác đơn hàng này!" });
                 }
 
+                if (!CanAccessOrder(donHang))
+                {
+                    return Json(new { success = false, message = "Bạn không có quyền thao tác đơn hàng này!" });
+                }
+
                 // Chỉ cho phép hủy đơn hàng ở trạng thái "Khởi tạo"
                 if (donHang.TrangThai == "Hoàn tất")
                 {
@@ -363,6 +401,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             {
                 return Json(new { success = false, message = ex.InnerException?.Message ?? ex.Message });
             }
+        }
+
+        private bool CanAccessOrder(Models.DonHang donHang)
+        {
+            return CurrentVaiTro != "NHAN_VIEN" || donHang.MaNV == CurrentMaNV;
         }
     }
 }

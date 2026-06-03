@@ -8,13 +8,15 @@ namespace QuanLyChuoiCaPhe.Web.Services
 {
     public class DonHangService
     {
+        private const decimal GiaTriMoiDiem = 100m;
+        private const decimal TienGiamTuDiemToiDa = 10000m;
+        private const decimal SoTienDeCongMotDiem = 10000m;
+
         private static readonly string[] ValidPaymentMethods =
         [
             "Tiền mặt",
-            "Thẻ",
-            "Chuyển khoản",
             "QR",
-            "Ví điện tử"
+            "Thẻ"
         ];
 
         private readonly QuanLyChuoiCaPheContext _context;
@@ -31,6 +33,8 @@ namespace QuanLyChuoiCaPhe.Web.Services
             await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
+                var maKH = string.IsNullOrWhiteSpace(model.MaKH) ? null : model.MaKH.Trim();
+                var khachHang = await GetKhachHangForOrderAsync(maKH, model.DiemSuDung);
                 var maDH = await GenerateMaDonHangAsync();
                 var now = DateTime.Now;
 
@@ -39,9 +43,13 @@ namespace QuanLyChuoiCaPhe.Web.Services
                     MaDH = maDH,
                     MaChiNhanh = model.MaChiNhanh,
                     MaNV = model.MaNV,
-                    MaKH = string.IsNullOrWhiteSpace(model.MaKH) ? null : model.MaKH,
+                    MaKH = maKH,
                     TongTien = 0,
-                    GiamGia = model.GiamGia,
+                    GiamGia = 0,
+                    GiamGiaThuCong = 0,
+                    DiemSuDung = 0,
+                    TienGiamTuDiem = 0,
+                    DiemCong = 0,
                     PhuongThucThanhToan = model.PhuongThucThanhToan,
                     TrangThai = "Khởi tạo",
                     NgayTao = now
@@ -109,23 +117,52 @@ namespace QuanLyChuoiCaPhe.Web.Services
                     throw new InvalidOperationException("Không thể xác định đơn giá sản phẩm");
                 }
 
-                if (donHang.GiamGia > donHang.TongTien)
+                var giamGiaThuCong = model.GiamGiaThuCong;
+                var diemSuDung = model.DiemSuDung;
+                var tienGiamTuDiem = diemSuDung * GiaTriMoiDiem;
+                var tongGiamGia = giamGiaThuCong + tienGiamTuDiem;
+
+                if (tienGiamTuDiem > TienGiamTuDiemToiDa)
                 {
-                    throw new InvalidOperationException("Giảm giá không được vượt quá tổng tiền đơn hàng");
+                    throw new InvalidOperationException("Tiền giảm từ điểm tối đa là 10.000 đ cho mỗi đơn hàng");
                 }
 
-                if (donHang.GiamGia > 0)
+                if (tongGiamGia > donHang.TongTien)
+                {
+                    throw new InvalidOperationException("Tổng giảm giá không được vượt quá tổng tiền đơn hàng");
+                }
+
+                var thanhTien = donHang.TongTien - tongGiamGia;
+                var diemCong = khachHang == null
+                    ? 0
+                    : TinhDiemCong(thanhTien);
+
+                if (giamGiaThuCong > 0)
                 {
                     _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
                     {
                         MaDH = maDH,
-                        HanhDong = $"Áp dụng giảm giá: {donHang.GiamGia:N0} đ",
+                        HanhDong = $"Áp dụng giảm giá thủ công: {giamGiaThuCong:N0} đ",
                         NguoiThucHien = nguoiThucHien,
                         ThoiGian = DateTime.Now
                     });
                 }
 
+                donHang.GiamGiaThuCong = giamGiaThuCong;
+                donHang.DiemSuDung = diemSuDung;
+                donHang.TienGiamTuDiem = tienGiamTuDiem;
+                donHang.GiamGia = tongGiamGia;
+                donHang.DiemCong = diemCong;
                 donHang.TrangThai = "Hoàn tất";
+
+                _context.HanhTrinhDonHangs.Add(new HanhTrinhDonHang
+                {
+                    MaDH = maDH,
+                    HanhDong = $"Thanh toán hoàn tất. Dùng {diemSuDung} điểm, giảm {tienGiamTuDiem:N0} đ từ điểm, cộng {diemCong} điểm.",
+                    NguoiThucHien = nguoiThucHien,
+                    ThoiGian = DateTime.Now
+                });
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -136,6 +173,42 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        private async Task<KhachHang?> GetKhachHangForOrderAsync(string? maKH, int diemSuDung)
+        {
+            if (string.IsNullOrWhiteSpace(maKH))
+            {
+                if (diemSuDung > 0)
+                {
+                    throw new InvalidOperationException("Khách vãng lai không được sử dụng điểm");
+                }
+
+                return null;
+            }
+
+            var khachHang = await _context.KhachHangs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(k => k.MaKH == maKH);
+
+            if (khachHang == null)
+            {
+                throw new InvalidOperationException("Khách hàng không tồn tại");
+            }
+
+            if (diemSuDung > khachHang.DiemTichLuy)
+            {
+                throw new InvalidOperationException("Số điểm sử dụng không được vượt quá điểm hiện có của khách hàng");
+            }
+
+            return khachHang;
+        }
+
+        private static int TinhDiemCong(decimal thanhTien)
+        {
+            return thanhTien <= 0
+                ? 0
+                : (int)Math.Floor(thanhTien / SoTienDeCongMotDiem);
         }
 
         public async Task<DonGiaBienTheResult> GetDonGiaBienTheAsync(string maBienThe, string maChiNhanh)
@@ -207,12 +280,23 @@ namespace QuanLyChuoiCaPhe.Web.Services
                 throw new InvalidOperationException("Số lượng không hợp lệ");
             }
 
-            if (model.GiamGia < 0)
+            if (model.GiamGiaThuCong < 0)
             {
-                throw new InvalidOperationException("Giảm giá phải lớn hơn hoặc bằng 0");
+                throw new InvalidOperationException("Giảm giá thủ công phải lớn hơn hoặc bằng 0");
             }
 
-            if (!ValidPaymentMethods.Contains(model.PhuongThucThanhToan))
+            if (model.DiemSuDung < 0)
+            {
+                throw new InvalidOperationException("Điểm sử dụng phải lớn hơn hoặc bằng 0");
+            }
+
+            if (model.DiemSuDung * GiaTriMoiDiem > TienGiamTuDiemToiDa)
+            {
+                throw new InvalidOperationException("Tiền giảm từ điểm tối đa là 10.000 đ cho mỗi đơn hàng");
+            }
+
+            if (string.IsNullOrWhiteSpace(model.PhuongThucThanhToan) ||
+                !ValidPaymentMethods.Contains(model.PhuongThucThanhToan))
             {
                 throw new InvalidOperationException("Phương thức thanh toán không hợp lệ");
             }

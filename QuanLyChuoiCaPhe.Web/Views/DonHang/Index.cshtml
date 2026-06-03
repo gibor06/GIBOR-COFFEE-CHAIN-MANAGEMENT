@@ -81,6 +81,7 @@
                             <th>Tổng tiền</th>
                             <th>Giảm giá</th>
                             <th>Thành tiền</th>
+                            <th>Điểm</th>
                             <th>PTTT</th>
                             <th>Ngày tạo</th>
                             <th>Trạng thái</th>
@@ -98,6 +99,10 @@
                                 <td>@item.TongTien.ToString("N0") đ</td>
                                 <td>@item.GiamGia.ToString("N0") đ</td>
                                 <td class="text-success"><strong>@((item.TongTien - item.GiamGia).ToString("N0")) đ</strong></td>
+                                <td>
+                                    <small>Dùng: @item.DiemSuDung</small><br />
+                                    <small>Cộng: @item.DiemCong</small>
+                                </td>
                                 <td>@item.PhuongThucThanhToan</td>
                                 <td>@item.NgayTao.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td>
