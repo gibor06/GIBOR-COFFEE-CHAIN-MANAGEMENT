@@ -1,0 +1,112 @@
+@model IEnumerable<NgayDacBiet>
+@{
+    ViewData["Title"] = "Quản lý Ngày đặc biệt";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-calendar-event"></i> Quản lý Ngày đặc biệt</h2>
+        <a asp-action="Create" class="btn btn-coffee">
+            <i class="bi bi-plus-circle"></i> Thêm ngày đặc biệt
+        </a>
+    </div>
+
+    <!-- Form lọc -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm theo tên ngày..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-3">
+                    <select name="nam" class="form-select">
+                        <option value="">-- Tất cả năm --</option>
+                        @for (int i = 2024; i <= 2030; i++)
+                        {
+                            <option value="@i" selected="@(ViewBag.Nam != null && (int)ViewBag.Nam == i)">Năm @i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Tìm
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Tên ngày</th>
+                            <th>Hệ số lương</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.Ngay.ToString("dd/MM/yyyy")</strong></td>
+                                <td>@item.TenNgay</td>
+                                <td>
+                                    <span class="badge bg-warning text-dark fs-6">x @item.HeSoLuong.ToString("N2")</span>
+                                </td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.Ngay.ToString("yyyy-MM-dd")" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="xoaNgay('@item.Ngay.ToString("yyyy-MM-dd")')" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu ngày đặc biệt.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function xoaNgay(ngay) {
+            if (confirm('Bạn có chắc chắn muốn xóa ngày đặc biệt này?')) {
+                fetch('/NgayDacBiet/Delete?id=' + encodeURIComponent(ngay), {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+    </script>
+}

@@ -1,0 +1,140 @@
+@model IEnumerable<ChamCong>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Quản lý Chấm công";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-clipboard-check"></i> Quản lý Chấm công</h2>
+        <a asp-action="Create" class="btn btn-coffee">
+            <i class="bi bi-plus-circle"></i> Thêm chấm công
+        </a>
+    </div>
+
+    <!-- Form lọc -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select name="maNV" class="form-select">
+                        <option value="">-- Tất cả nhân viên --</option>
+                        @if (ViewBag.NhanViens != null)
+                        {
+                            @foreach (SelectListItem nv in ViewBag.NhanViens)
+                            {
+                                <option value="@nv.Value" selected="@(ViewBag.MaNV == nv.Value)">@nv.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Trạng thái --</option>
+                        <option value="Hợp lệ" selected="@(ViewBag.TrangThai == "Hợp lệ")">Hợp lệ</option>
+                        <option value="Đi muộn" selected="@(ViewBag.TrangThai == "Đi muộn")">Đi muộn</option>
+                        <option value="Về sớm" selected="@(ViewBag.TrangThai == "Về sớm")">Về sớm</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="thang" class="form-select">
+                        <option value="">-- Tháng --</option>
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i" selected="@(ViewBag.Thang != null && (int)ViewBag.Thang == i)">Tháng @i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="nam" class="form-select">
+                        <option value="">-- Năm --</option>
+                        @for (int i = 2024; i <= 2030; i++)
+                        {
+                            <option value="@i" selected="@(ViewBag.Nam != null && (int)ViewBag.Nam == i)">@i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã CC</th>
+                            <th>Nhân viên</th>
+                            <th>Ngày</th>
+                            <th>Ca làm</th>
+                            <th>Giờ vào</th>
+                            <th>Giờ ra</th>
+                            <th>Trạng thái</th>
+                            <th>Hệ số ngày</th>
+                            <th>Hệ số ca</th>
+                            <th>Lương thực tế</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.MaChamCong</strong></td>
+                                <td>@item.ThongTinNhanVien?.HoTenNV</td>
+                                <td>@item.LichPhanCong?.NgayLamViec.ToString("dd/MM/yyyy")</td>
+                                <td>@item.LichPhanCong?.CaLamViec?.TenCa</td>
+                                <td>@item.GioVao.ToString("HH:mm")</td>
+                                <td>@item.GioRa.ToString("HH:mm")</td>
+                                <td>
+                                    @switch (item.TrangThai)
+                                    {
+                                        case "Hợp lệ":
+                                            <span class="badge bg-success">Hợp lệ</span>
+                                            break;
+                                        case "Đi muộn":
+                                            <span class="badge bg-danger">Đi muộn</span>
+                                            break;
+                                        case "Về sớm":
+                                            <span class="badge bg-warning text-dark">Về sớm</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@item.TrangThai</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@item.HeSoNgay?.ToString("N2")</td>
+                                <td>@item.HeSoCa?.ToString("N2")</td>
+                                <td class="text-success"><strong>@(item.LuongThucTe?.ToString("N0") ?? "0") đ</strong></td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.MaChamCong" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu chấm công.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

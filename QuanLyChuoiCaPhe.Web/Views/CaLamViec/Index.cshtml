@@ -1,0 +1,138 @@
+@model IEnumerable<CaLamViec>
+@{
+    ViewData["Title"] = "Quản lý Ca làm việc";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-clock"></i> Quản lý Ca làm việc</h2>
+        <a asp-action="Create" class="btn btn-coffee">
+            <i class="bi bi-plus-circle"></i> Thêm ca mới
+        </a>
+    </div>
+
+    <!-- Card thống kê -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Tổng số ca</h6>
+                        <h3 class="mb-0">@ViewBag.TongSoCa</h3>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form lọc -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm theo mã ca, tên ca..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-3">
+                    <select name="loaiCa" class="form-select">
+                        <option value="">-- Tất cả loại ca --</option>
+                        <option value="1" selected="@(ViewBag.LoaiCa == (byte?)1)">Fulltime</option>
+                        <option value="2" selected="@(ViewBag.LoaiCa == (byte?)2)">Parttime</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Tìm
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng dữ liệu -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã ca</th>
+                            <th>Tên ca</th>
+                            <th>Loại ca</th>
+                            <th>Hệ số</th>
+                            <th>Giờ bắt đầu</th>
+                            <th>Giờ kết thúc</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.MaCa</strong></td>
+                                <td>@item.TenCa</td>
+                                <td>
+                                    @if (item.LoaiCa == 1)
+                                    {
+                                        <span class="badge bg-primary">Fulltime</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">Parttime</span>
+                                    }
+                                </td>
+                                <td>@item.HeSoCa.ToString("N2")</td>
+                                <td>@item.GioBatDau.ToString(@"hh\:mm")</td>
+                                <td>@item.GioKetThuc.ToString(@"hh\:mm")</td>
+                                <td>
+                                    <a asp-action="Edit" asp-route-id="@item.MaCa" class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="xoaCa('@item.MaCa')" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu ca làm việc.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function xoaCa(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa ca làm việc này?')) {
+                fetch('/CaLamViec/Delete?id=' + encodeURIComponent(id), {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+    </script>
+}

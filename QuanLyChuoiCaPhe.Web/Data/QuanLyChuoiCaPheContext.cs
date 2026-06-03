@@ -85,6 +85,10 @@ namespace QuanLyChuoiCaPhe.Web.Data
             modelBuilder.Entity<LichPhanCong>()
                 .ToTable(tb => tb.HasTrigger("TRG_LichPhanCong_Validate"));
             
+            // ChamCong
+            modelBuilder.Entity<ChamCong>()
+                .ToTable(tb => tb.HasTrigger("TRG_ChamCong_XuLy"));
+            
             // BangLuong
             modelBuilder.Entity<BangLuong>()
                 .ToTable(tb => tb.HasTrigger("TRG_BangLuong_KhoaDuLieu"));

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace QuanLyChuoiCaPhe.Web.Models
 {
@@ -33,5 +34,13 @@ namespace QuanLyChuoiCaPhe.Web.Models
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal? LuongThucTe { get; set; }
+
+        [ForeignKey("MaNV")]
+        [ValidateNever]
+        public virtual ThongTinNhanVien? ThongTinNhanVien { get; set; }
+
+        [ForeignKey("MaLich")]
+        [ValidateNever]
+        public virtual LichPhanCong? LichPhanCong { get; set; }
     }
 }

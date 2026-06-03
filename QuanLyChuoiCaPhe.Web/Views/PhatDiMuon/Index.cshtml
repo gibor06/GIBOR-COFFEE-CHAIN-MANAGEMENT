@@ -1,0 +1,121 @@
+@model IEnumerable<PhatDiMuon>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Quản lý Phạt đi muộn";
+}
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-exclamation-diamond"></i> Phạt đi muộn</h2>
+    </div>
+
+    <!-- Card thống kê -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Tổng lần đi muộn</h6>
+                        <h3 class="mb-0">@ViewBag.TongLanPhat</h3>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Tổng tiền phạt</h6>
+                        <h3 class="mb-0">@(((decimal)ViewBag.TongTienPhat).ToString("N0")) đ</h3>
+                    </div>
+                    <i class="bi bi-cash-coin fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form lọc -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select name="maNV" class="form-select">
+                        <option value="">-- Tất cả nhân viên --</option>
+                        @if (ViewBag.NhanViens != null)
+                        {
+                            @foreach (SelectListItem nv in ViewBag.NhanViens)
+                            {
+                                <option value="@nv.Value" selected="@(ViewBag.MaNV == nv.Value)">@nv.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="thang" class="form-select">
+                        <option value="">-- Tháng --</option>
+                        @for (int i = 1; i <= 12; i++)
+                        {
+                            <option value="@i" selected="@(ViewBag.Thang != null && (int)ViewBag.Thang == i)">Tháng @i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="nam" class="form-select">
+                        <option value="">-- Năm --</option>
+                        @for (int i = 2024; i <= 2030; i++)
+                        {
+                            <option value="@i" selected="@(ViewBag.Nam != null && (int)ViewBag.Nam == i)">@i</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã chấm công</th>
+                            <th>Mã NV</th>
+                            <th>Tên nhân viên</th>
+                            <th>Ngày phạt</th>
+                            <th>Số tiền phạt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.MaChamCong</strong></td>
+                                <td>@item.MaNV</td>
+                                <td>@item.ThongTinNhanVien?.HoTenNV</td>
+                                <td>@item.NgayPhat.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge bg-danger fs-6">@item.SoTien.ToString("N0") đ</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu phạt đi muộn.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
