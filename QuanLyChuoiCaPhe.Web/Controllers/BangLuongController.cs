@@ -85,6 +85,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [RoleAuthorize("ADMIN", "KE_TOAN")] // Chỉ ADMIN và KE_TOAN được cập nhật thưởng/khấu trừ
         public async Task<IActionResult> CapNhatThuongKhauTru(string maNV, byte thang, short nam, decimal? thuong, decimal? khauTru)
         {
@@ -109,6 +110,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                     return Json(new { success = false, message = "Không thể sửa bảng lương đã thanh toán!" });
                 }
 
+                if ((thuong.HasValue && thuong.Value < 0) || (khauTru.HasValue && khauTru.Value < 0))
+                {
+                    return Json(new { success = false, message = "Thưởng và khấu trừ không được nhỏ hơn 0!" });
+                }
+
                 if (thuong.HasValue)
                 {
                     bangLuong.TongThuong = thuong.Value;
@@ -130,6 +136,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [RoleAuthorize("ADMIN", "KE_TOAN")] // Chỉ ADMIN và KE_TOAN được xác nhận thanh toán
         public async Task<IActionResult> XacNhanThanhToan(string maNV, byte thang, short nam)
         {
@@ -145,6 +152,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 if (bangLuong == null)
                 {
                     return Json(new { success = false, message = "Không tìm thấy bảng lương!" });
+                }
+
+                if (bangLuong.TrangThai == "Đã thanh toán")
+                {
+                    return Json(new { success = false, message = "Bảng lương này đã được thanh toán trước đó!" });
                 }
 
                 bangLuong.TrangThai = "Đã thanh toán";

@@ -200,30 +200,19 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBienThePrice(string id)
         {
-            var bienThe = await _context.BienTheSanPhams
-                .Include(b => b.SanPham)
-                .FirstOrDefaultAsync(b => b.MaBienThe == id);
-
-            if (bienThe == null)
-            {
-                return Json(new { success = false, message = "Không tìm thấy biến thể!" });
-            }
-
             var chiNhanh = CurrentMaChiNhanh;
-            decimal basePrice = bienThe.SanPham.GiaCoBan;
-
-            if (!string.IsNullOrEmpty(chiNhanh))
+            if (string.IsNullOrEmpty(chiNhanh))
             {
-                var spcn = await _context.SanPhamChiNhanhs
-                    .FirstOrDefaultAsync(s => s.MaChiNhanh == chiNhanh && s.MaSanPham == bienThe.MaSanPham);
-                if (spcn != null)
-                {
-                    basePrice = spcn.GiaBan;
-                }
+                return Json(new { success = false, message = "Không xác định được chi nhánh hiện tại" });
             }
 
-            var price = basePrice + bienThe.GiaCongThem;
-            return Json(new { success = true, price = price, tenSanPham = bienThe.SanPham.TenSanPham, size = bienThe.Size });
+            var result = await _donHangService.GetDonGiaBienTheAsync(id, chiNhanh);
+            if (!result.IsValid)
+            {
+                return Json(new { success = false, message = result.Message });
+            }
+
+            return Json(new { success = true, price = result.DonGia, tenSanPham = result.TenSanPham, size = result.Size });
         }
 
         private async Task PrepareCreateViewBagAsync(string chiNhanhFilter)
@@ -243,15 +232,34 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ViewBag.KhachHangs = new SelectList(await _context.KhachHangs.ToListAsync(), "MaKH", "TenKH");
             
             // Chỉ lấy biến thể thuộc menu/sản phẩm của chi nhánh hiện tại
-            ViewBag.BienThes = await _context.BienTheSanPhams
+            var bienThes = await _context.BienTheSanPhams
                 .Include(b => b.SanPham)
                 .Where(b => b.TrangThai && b.SanPham.TrangThai)
                 .Where(b => _context.SanPhamChiNhanhs.Any(spcn => spcn.MaChiNhanh == chiNhanhFilter && spcn.MaSanPham == b.MaSanPham && spcn.TrangThai))
                 .ToListAsync();
+
+            var priceByBienThe = await (
+                from bt in _context.BienTheSanPhams
+                join sp in _context.SanPhams on bt.MaSanPham equals sp.MaSanPham
+                join spcn in _context.SanPhamChiNhanhs on sp.MaSanPham equals spcn.MaSanPham
+                where spcn.MaChiNhanh == chiNhanhFilter
+                      && spcn.TrangThai
+                      && sp.TrangThai
+                      && bt.TrangThai
+                select new
+                {
+                    bt.MaBienThe,
+                    DonGia = spcn.GiaBan + bt.GiaCongThem
+                })
+                .ToDictionaryAsync(x => x.MaBienThe, x => x.DonGia);
+
+            ViewBag.BienThes = bienThes;
+            ViewBag.BienThePrices = priceByBienThe;
         }
 
         [HttpPost]
         [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CapNhatTrangThai(string id, string trangThai)
         {
             try
@@ -306,6 +314,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [RoleAuthorize("ADMIN", "NHAN_VIEN", "QUAN_LY")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> HuyDonHang(string id)
         {
             try

@@ -30,6 +30,7 @@ builder.Services.AddSession(options =>
 
 // Add Services
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<DonHangService>();
 builder.Services.AddScoped<KhoService>();

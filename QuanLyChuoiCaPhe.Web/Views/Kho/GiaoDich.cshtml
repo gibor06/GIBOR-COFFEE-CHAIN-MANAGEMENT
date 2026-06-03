@@ -37,6 +37,7 @@
                             <option value="Xuất">Xuất</option>
                             <option value="Hao hụt">Hao hụt</option>
                             <option value="Hết hạn">Hết hạn</option>
+                            <option value="Điều chỉnh">Điều chỉnh</option>
                         </select>
                         <span asp-validation-for="LoaiGiaoDich" class="text-danger"></span>
                     </div>
@@ -173,7 +174,7 @@
                 } else if (isNaN(qtyVal) || qtyVal <= 0) {
                     isValid = false;
                     errorMsg = "Số lượng nhập phải lớn hơn 0.";
-                } else if (actionType === "Xuất" || actionType === "Hao hụt" || actionType === "Hết hạn") {
+                } else if (actionType === "Xuất" || actionType === "Hao hụt" || actionType === "Hết hạn" || actionType === "Điều chỉnh") {
                     if (qtyVal > currentStock) {
                         isValid = false;
                         errorMsg = `Số lượng yêu cầu (${qtyVal}) lớn hơn số lượng tồn hiện tại (${currentStock}). Không thể thực hiện giao dịch xuất kho!`;

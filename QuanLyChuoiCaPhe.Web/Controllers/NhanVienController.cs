@@ -128,6 +128,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             {
                 ModelState.AddModelError("MaChucVu", "Chức vụ là bắt buộc");
             }
+
+            await ValidateEmployeeUniquenessAsync(model);
             
             if (!ModelState.IsValid)
             {
@@ -145,7 +147,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                model.MaNV = GenerateMaNhanVien();
+                model.MaNV = await GenerateMaNhanVienAsync();
                 model.TrangThai = true;
                 
                 _context.ThongTinNhanViens.Add(model);
@@ -233,6 +235,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ModelState.Remove("TaiKhoanNhanViens");
             ModelState.Remove("MaChiNhanhNavigation");
             ModelState.Remove("MaChucVuNavigation");
+
+            await ValidateEmployeeUniquenessAsync(model, model.MaNV);
             
             if (!ModelState.IsValid)
             {
@@ -250,7 +254,30 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                _context.ThongTinNhanViens.Update(model);
+                var nhanVien = await _context.ThongTinNhanViens.FindAsync(model.MaNV);
+                if (nhanVien == null)
+                {
+                    TempData["Error"] = "Không tìm thấy nhân viên!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (!CanAccessChiNhanh(nhanVien.MaChiNhanh) || !CanAccessChiNhanh(model.MaChiNhanh))
+                {
+                    TempData["Error"] = "Bạn không có quyền thao tác nhân viên này!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                nhanVien.LoaiNV = model.LoaiNV;
+                nhanVien.HoTenNV = model.HoTenNV;
+                nhanVien.MaChucVu = model.MaChucVu;
+                nhanVien.MaChiNhanh = IsAdmin ? model.MaChiNhanh : nhanVien.MaChiNhanh;
+                nhanVien.NgayVaoLam = model.NgayVaoLam;
+                nhanVien.NgayNghiViec = model.NgayNghiViec;
+                nhanVien.SoDienThoai = model.SoDienThoai;
+                nhanVien.SoCCCD = model.SoCCCD;
+                nhanVien.Email = model.Email;
+                nhanVien.TrangThai = model.TrangThai;
+
                 await _context.SaveChangesAsync();
 
                 TempData["Success"] = "Cập nhật nhân viên thành công!";
@@ -274,6 +301,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> NghiViec(string id)
         {
             try
@@ -297,6 +325,17 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
                 nhanVien.NgayNghiViec = DateTime.Now;
                 nhanVien.TrangThai = false;
+
+                var linkedAccounts = await _context.TaiKhoanNhanViens
+                    .Include(t => t.HeThongTaiKhoan)
+                    .Where(t => t.MaNV == id)
+                    .ToListAsync();
+
+                foreach (var linkedAccount in linkedAccounts)
+                {
+                    linkedAccount.HeThongTaiKhoan.TrangThai = false;
+                }
+
                 await _context.SaveChangesAsync();
 
                 return Json(new { success = true, message = "Cập nhật nghỉ việc thành công!" });
@@ -307,11 +346,34 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             }
         }
 
-        private string GenerateMaNhanVien()
+        private async Task ValidateEmployeeUniquenessAsync(ThongTinNhanVien model, string? currentMaNV = null)
         {
-            var random = new Random();
-            var number = random.Next(10000, 99999);
-            return $"NV{number}";
+            if (await _context.ThongTinNhanViens.AnyAsync(n => n.SoDienThoai == model.SoDienThoai && n.MaNV != currentMaNV))
+            {
+                ModelState.AddModelError(nameof(model.SoDienThoai), "Số điện thoại đã tồn tại.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.SoCCCD) &&
+                await _context.ThongTinNhanViens.AnyAsync(n => n.SoCCCD == model.SoCCCD && n.MaNV != currentMaNV))
+            {
+                ModelState.AddModelError(nameof(model.SoCCCD), "Số CCCD đã tồn tại.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Email) &&
+                await _context.ThongTinNhanViens.AnyAsync(n => n.Email == model.Email && n.MaNV != currentMaNV))
+            {
+                ModelState.AddModelError(nameof(model.Email), "Email đã tồn tại.");
+            }
+        }
+
+        private async Task<string> GenerateMaNhanVienAsync()
+        {
+            var existingCodes = await _context.ThongTinNhanViens
+                .AsNoTracking()
+                .Select(n => n.MaNV)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("NV", 8, existingCodes);
         }
     }
 }

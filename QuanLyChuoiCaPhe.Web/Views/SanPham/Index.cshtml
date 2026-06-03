@@ -3,6 +3,8 @@
     ViewData["Title"] = "Quản lý Sản phẩm";
 }
 
+@Html.AntiForgeryToken()
+
 <style>
     .product-card {
         transition: all 0.3s ease;
@@ -274,7 +276,12 @@
     <script>
         function toggleStatus(id) {
             if (confirm('Bạn có chắc muốn thay đổi trạng thái sản phẩm này?')) {
-                fetch('/SanPham/ToggleStatus?id=' + id, { method: 'POST' })
+                fetch('/SanPham/ToggleStatus?id=' + encodeURIComponent(id), {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

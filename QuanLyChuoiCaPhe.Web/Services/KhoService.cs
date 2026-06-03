@@ -1,13 +1,30 @@
+using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.ViewModels;
-using System.Data;
 
 namespace QuanLyChuoiCaPhe.Web.Services
 {
     public class KhoService
     {
+        private static readonly string[] ValidTransactionTypes =
+        [
+            "Nhập",
+            "Xuất",
+            "Hao hụt",
+            "Hết hạn",
+            "Điều chỉnh"
+        ];
+
+        private static readonly string[] StockReductionTypes =
+        [
+            "Xuất",
+            "Hao hụt",
+            "Hết hạn",
+            "Điều chỉnh"
+        ];
+
         private readonly QuanLyChuoiCaPheContext _context;
 
         public KhoService(QuanLyChuoiCaPheContext context)
@@ -17,7 +34,25 @@ namespace QuanLyChuoiCaPhe.Web.Services
 
         public async Task GhiNhanGiaoDichKhoAsync(KhoGiaoDichViewModel model)
         {
-            var logID = GenerateLogID();
+            ValidateGiaoDich(model);
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var tonKho = await _context.TonKhoNguyenLieus
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.MaChiNhanh == model.MaChiNhanh && t.MaNguyenLieu == model.MaNguyenLieu);
+
+            if (tonKho == null)
+            {
+                throw new InvalidOperationException("Chưa khởi tạo tồn kho cho chi nhánh và nguyên liệu này.");
+            }
+
+            if (StockReductionTypes.Contains(model.LoaiGiaoDich) && tonKho.SoLuongTon < model.SoLuong)
+            {
+                throw new InvalidOperationException("Số lượng tồn kho không đủ để thực hiện giao dịch xuất/trừ.");
+            }
+
+            var logID = await GenerateLogIDAsync();
 
             var parameters = new[]
             {
@@ -32,6 +67,8 @@ namespace QuanLyChuoiCaPhe.Web.Services
             await _context.Database.ExecuteSqlRawAsync(
                 "EXEC sp_GhiNhanGiaoDichKho @LogID, @MaChiNhanh, @MaNguyenLieu, @LoaiGiaoDich, @SoLuong, @GhiChu",
                 parameters);
+
+            await transaction.CommitAsync();
         }
 
         public async Task CanhBaoTonKhoAsync()
@@ -39,11 +76,32 @@ namespace QuanLyChuoiCaPhe.Web.Services
             await _context.Database.ExecuteSqlRawAsync("EXEC sp_CanhBaoTonKho");
         }
 
-        private string GenerateLogID()
+        private static void ValidateGiaoDich(KhoGiaoDichViewModel model)
         {
-            var random = new Random();
-            var number = random.Next(1000000000, int.MaxValue);
-            return $"L{number}";
+            if (string.IsNullOrWhiteSpace(model.MaChiNhanh) || string.IsNullOrWhiteSpace(model.MaNguyenLieu))
+            {
+                throw new InvalidOperationException("Chi nhánh và nguyên liệu là bắt buộc.");
+            }
+
+            if (!ValidTransactionTypes.Contains(model.LoaiGiaoDich))
+            {
+                throw new InvalidOperationException("Loại giao dịch kho không hợp lệ.");
+            }
+
+            if (model.SoLuong <= 0)
+            {
+                throw new InvalidOperationException("Số lượng phải lớn hơn 0.");
+            }
+        }
+
+        private async Task<string> GenerateLogIDAsync()
+        {
+            var existingCodes = await _context.LichSuKhos
+                .AsNoTracking()
+                .Select(l => l.LogID)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("L", 9, existingCodes);
         }
     }
 }

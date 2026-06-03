@@ -10,7 +10,7 @@ namespace QuanLyChuoiCaPhe.Web.Models
         [StringLength(10)]
         public string MaCTDH { get; set; } = null!;
         
-        [StringLength(6)]
+        [StringLength(10)]
         public string MaDH { get; set; } = null!;
         
         [StringLength(10)]

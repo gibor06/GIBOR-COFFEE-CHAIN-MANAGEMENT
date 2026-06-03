@@ -29,6 +29,5 @@ namespace QuanLyChuoiCaPhe.Web.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng phải >= 1")]
         public int SoLuong { get; set; }
 
-        public decimal DonGia { get; set; }
     }
 }

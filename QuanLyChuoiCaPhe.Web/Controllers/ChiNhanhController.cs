@@ -5,6 +5,7 @@ using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Models;
 using QuanLyChuoiCaPhe.Web.Services;
+using System.Data;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
@@ -86,9 +87,47 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                model.MaChiNhanh = GenerateMaChiNhanh();
+                await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+                model.MaChiNhanh = await GenerateMaChiNhanhAsync();
                 _context.ChiNhanhs.Add(model);
                 await _context.SaveChangesAsync();
+
+                var activeProducts = await _context.SanPhams
+                    .AsNoTracking()
+                    .Where(s => s.TrangThai)
+                    .ToListAsync();
+
+                foreach (var sanPham in activeProducts)
+                {
+                    _context.SanPhamChiNhanhs.Add(new SanPhamChiNhanh
+                    {
+                        MaChiNhanh = model.MaChiNhanh,
+                        MaSanPham = sanPham.MaSanPham,
+                        GiaBan = sanPham.GiaCoBan,
+                        TrangThai = true
+                    });
+                }
+
+                var activeMaterials = await _context.NguyenLieus
+                    .AsNoTracking()
+                    .Where(n => n.TrangThai == "Đang sử dụng")
+                    .ToListAsync();
+
+                foreach (var nguyenLieu in activeMaterials)
+                {
+                    _context.TonKhoNguyenLieus.Add(new TonKhoNguyenLieu
+                    {
+                        MaChiNhanh = model.MaChiNhanh,
+                        MaNguyenLieu = nguyenLieu.MaNguyenLieu,
+                        SoLuongTon = 0,
+                        MucCanhBao = 0,
+                        SoLuongDaDat = 0
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 TempData["Success"] = "Thêm chi nhánh thành công!";
                 return RedirectToAction(nameof(Index));
@@ -142,7 +181,20 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                _context.ChiNhanhs.Update(model);
+                var chiNhanh = await _context.ChiNhanhs.FindAsync(model.MaChiNhanh);
+                if (chiNhanh == null)
+                {
+                    TempData["Error"] = "Không tìm thấy chi nhánh!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                chiNhanh.MaKhuVuc = model.MaKhuVuc;
+                chiNhanh.TenChiNhanh = model.TenChiNhanh;
+                chiNhanh.SoDienThoai = model.SoDienThoai;
+                chiNhanh.DiaChi = model.DiaChi;
+                chiNhanh.TrangThai = model.TrangThai;
+                chiNhanh.NgayThanhLap = model.NgayThanhLap;
+
                 await _context.SaveChangesAsync();
 
                 TempData["Success"] = "Cập nhật chi nhánh thành công!";
@@ -158,6 +210,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [RoleAuthorize("ADMIN")] // Chỉ ADMIN mới được bật/tắt chi nhánh
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             try
@@ -179,11 +232,14 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             }
         }
 
-        private string GenerateMaChiNhanh()
+        private async Task<string> GenerateMaChiNhanhAsync()
         {
-            var random = new Random();
-            var number = random.Next(1000, 9999);
-            return $"CN{number}";
+            var existingCodes = await _context.ChiNhanhs
+                .AsNoTracking()
+                .Select(c => c.MaChiNhanh)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("CN", 8, existingCodes);
         }
     }
 }

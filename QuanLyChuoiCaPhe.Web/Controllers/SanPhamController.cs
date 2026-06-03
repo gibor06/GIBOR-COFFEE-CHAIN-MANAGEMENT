@@ -5,6 +5,7 @@ using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Models;
 using QuanLyChuoiCaPhe.Web.Services;
+using System.Data;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
 {
@@ -78,9 +79,22 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                model.MaSanPham = GenerateMaSanPham();
+                await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+                model.MaSanPham = await GenerateMaSanPhamAsync();
                 _context.SanPhams.Add(model);
                 await _context.SaveChangesAsync();
+
+                _context.BienTheSanPhams.Add(new BienTheSanPham
+                {
+                    MaBienThe = await GenerateMaBienTheAsync(),
+                    MaSanPham = model.MaSanPham,
+                    Size = "Vừa",
+                    GiaCongThem = 0,
+                    TrangThai = model.TrangThai
+                });
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 TempData["Success"] = "Thêm sản phẩm thành công!";
                 return RedirectToAction(nameof(Index));
@@ -129,7 +143,19 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
             try
             {
-                _context.SanPhams.Update(model);
+                var sanPham = await _context.SanPhams.FindAsync(model.MaSanPham);
+                if (sanPham == null)
+                {
+                    TempData["Error"] = "Không tìm thấy sản phẩm!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                sanPham.MaDanhMuc = model.MaDanhMuc;
+                sanPham.TenSanPham = model.TenSanPham;
+                sanPham.GiaCoBan = model.GiaCoBan;
+                sanPham.TrangThai = model.TrangThai;
+                sanPham.MoTa = model.MoTa;
+
                 await _context.SaveChangesAsync();
 
                 TempData["Success"] = "Cập nhật sản phẩm thành công!";
@@ -145,6 +171,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         [HttpPost]
         [RoleAuthorize("ADMIN", "QUAN_LY")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             try
@@ -232,11 +259,24 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             return View(await query.ToListAsync());
         }
 
-        private string GenerateMaSanPham()
+        private async Task<string> GenerateMaSanPhamAsync()
         {
-            var random = new Random();
-            var number = random.Next(1000, 9999);
-            return $"SP{number}";
+            var existingCodes = await _context.SanPhams
+                .AsNoTracking()
+                .Select(s => s.MaSanPham)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("SP", 8, existingCodes);
+        }
+
+        private async Task<string> GenerateMaBienTheAsync()
+        {
+            var existingCodes = await _context.BienTheSanPhams
+                .AsNoTracking()
+                .Select(b => b.MaBienThe)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("BT", 8, existingCodes);
         }
     }
 }

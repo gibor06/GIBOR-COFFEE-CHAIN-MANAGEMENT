@@ -9,7 +9,7 @@
 ## BƯỚC 1: CÀI ĐẶT DATABASE
 
 1. Mở SQL Server Management Studio (SSMS)
-2. Chạy file `DB_DA_QuanLyQuanCF_Professional.sql` để tạo database
+2. Chạy file `../GIBOR_COFFEE_COMPLETE.sql` để tạo database
 3. Kiểm tra database `QuanLyChuoiCaPhe` đã được tạo thành công
 
 ## BƯỚC 2: CÀI ĐẶT PROJECT
@@ -65,29 +65,20 @@ FROM HeThongTaiKhoan
 WHERE TrangThai = 1;
 ```
 
-**LƯU Ý:** Hiện tại hệ thống so sánh mật khẩu trực tiếp (chưa hash). Khi triển khai thực tế cần thay bằng SHA256.
+**LƯU Ý:** Hệ thống dùng `PasswordHasher` của ASP.NET Core cho mật khẩu mới. Dữ liệu seed cũ dạng plaintext, `sha256$hex`, hoặc SHA256 Base64 vẫn đăng nhập được và sẽ tự rehash sau lần đăng nhập thành công.
 
-### Tài khoản mẫu (nếu có trong database):
+### Tài khoản mẫu
 
-- **ADMIN:**
-  - Username: admin
-  - Password: (xem trong database)
+Các tài khoản demo được cấu hình riêng theo từng vai trò trong `GIBOR_COFFEE_COMPLETE.sql`.
+Nếu database đã tồn tại, chạy thêm `../GIBOR_COFFEE_CONFIG_5_DEMO_ACCOUNTS.sql` để cập nhật lại đúng 5 tài khoản này mà không cần tạo lại database.
 
-- **QUAN_LY:**
-  - Username: quanly
-  - Password: (xem trong database)
-
-- **NHAN_VIEN:**
-  - Username: nhanvien
-  - Password: (xem trong database)
-
-- **KHO:**
-  - Username: kho
-  - Password: (xem trong database)
-
-- **KE_TOAN:**
-  - Username: ketoan
-  - Password: (xem trong database)
+| Mã TK | Nhân viên | Vai trò | Username | Password |
+| --- | --- | --- | --- | --- |
+| TK00000051 | Trần Gia Bảo | ADMIN | trangiabao | 123123 |
+| TK00000052 | Lê Quang Bảo | QUAN_LY | lequangbao | 123123 |
+| TK00000053 | Trần Dương Gia Bảo | NHAN_VIEN | tranduonggiabao | 123123 |
+| TK00000054 | Nguyễn Ngọc Châu | KE_TOAN | nguyenngocchau | 123123 |
+| TK00000055 | Nguyễn Thế Anh | KHO | nguyentheanh | 123123 |
 
 ## BƯỚC 5: TRUY CẬP HỆ THỐNG
 
@@ -147,10 +138,12 @@ Tạo đơn hàng mới và tự động cập nhật tổng tiền, điểm tí
 
 ```sql
 EXEC sp_TaoDonHang
-    @MaDH = 'DH0001',
+    @MaDH = 'DH00000001',
     @MaChiNhanh = 'CN001',
     @MaNV = 'NV001',
     @MaKH = NULL,
+    @MaBienThe1 = 'BT0000001',
+    @SoLuong1 = 1,
     @GiamGia = 0,
     @PhuongThucThanhToan = N'Tiền mặt';
 ```
@@ -161,7 +154,7 @@ Ghi nhận giao dịch nhập/xuất kho và tự động cập nhật tồn kho
 
 ```sql
 EXEC sp_GhiNhanGiaoDichKho
-    @LogID = 'L0001',
+    @LogID = 'L000000001',
     @MaChiNhanh = 'CN001',
     @MaNguyenLieu = 'NL001',
     @LoaiGiaoDich = N'Nhập',
@@ -244,7 +237,8 @@ SELECT * FROM vw_BangLuongTongHop WHERE Thang = 12 AND Nam = 2024;
 
 - Kiểm tra tài khoản trong bảng HeThongTaiKhoan
 - Kiểm tra TrangThai = 1 (đang hoạt động)
-- Kiểm tra mật khẩu (hiện tại so sánh trực tiếp)
+- Kiểm tra tài khoản non-admin đã liên kết với nhân viên đang hoạt động
+- Kiểm tra mật khẩu theo dữ liệu seed hoặc mật khẩu đã được đặt lại
 
 ## CHECKLIST KIỂM THỬ
 

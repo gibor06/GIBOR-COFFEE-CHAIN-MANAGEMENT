@@ -8,53 +8,48 @@ namespace QuanLyChuoiCaPhe.Web.Services
     {
         private readonly QuanLyChuoiCaPheContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly PasswordService _passwordService;
 
-        public AuthService(QuanLyChuoiCaPheContext context, IHttpContextAccessor httpContextAccessor)
+        public AuthService(
+            QuanLyChuoiCaPheContext context,
+            IHttpContextAccessor httpContextAccessor,
+            PasswordService passwordService)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _passwordService = passwordService;
         }
 
         public async Task<HeThongTaiKhoan?> LoginAsync(string tenDangNhap, string matKhau)
         {
-            // TODO: Thay thế bằng SHA256 hash khi triển khai thực tế
-            // Hiện tại so sánh trực tiếp để test
             var taiKhoan = await _context.HeThongTaiKhoans
-                .FirstOrDefaultAsync(t => t.TenDangNhap == tenDangNhap 
-                                       && t.MatKhauHash == matKhau);
+                .FirstOrDefaultAsync(t => t.TenDangNhap == tenDangNhap);
 
-            if (taiKhoan == null)
+            if (taiKhoan == null ||
+                !_passwordService.VerifyPassword(taiKhoan, matKhau, out var needsRehash) ||
+                !taiKhoan.TrangThai)
             {
                 return null;
             }
 
-            // Kiểm tra tài khoản có bị khóa không
-            if (!taiKhoan.TrangThai)
-            {
-                return null; // Tài khoản bị khóa
-            }
-
-            // Nếu không phải ADMIN, kiểm tra trạng thái nhân viên
             if (taiKhoan.VaiTro != "ADMIN")
             {
                 var taiKhoanNV = await _context.TaiKhoanNhanViens
                     .Include(t => t.ThongTinNhanVien)
                     .FirstOrDefaultAsync(t => t.MaTK == taiKhoan.MaTK);
 
-                if (taiKhoanNV != null)
+                if (taiKhoanNV == null ||
+                    taiKhoanNV.ThongTinNhanVien.NgayNghiViec != null ||
+                    !taiKhoanNV.ThongTinNhanVien.TrangThai)
                 {
-                    // Kiểm tra nhân viên có nghỉ việc không
-                    if (taiKhoanNV.ThongTinNhanVien.NgayNghiViec != null)
-                    {
-                        return null; // Nhân viên đã nghỉ việc
-                    }
-
-                    // Kiểm tra trạng thái nhân viên
-                    if (!taiKhoanNV.ThongTinNhanVien.TrangThai)
-                    {
-                        return null; // Nhân viên bị vô hiệu hóa
-                    }
+                    return null;
                 }
+            }
+
+            if (needsRehash)
+            {
+                taiKhoan.MatKhauHash = _passwordService.HashPassword(taiKhoan, matKhau);
+                await _context.SaveChangesAsync();
             }
 
             return taiKhoan;
@@ -63,26 +58,32 @@ namespace QuanLyChuoiCaPhe.Web.Services
         public async Task SetSessionAsync(HeThongTaiKhoan taiKhoan)
         {
             var session = _httpContextAccessor.HttpContext?.Session;
-            if (session != null)
+            if (session == null)
             {
-                session.SetString("MaTK", taiKhoan.MaTK);
-                session.SetString("TenDangNhap", taiKhoan.TenDangNhap);
-                session.SetString("VaiTro", taiKhoan.VaiTro);
-                session.SetString("UserRole", taiKhoan.VaiTro);
-                
-                // Lấy thông tin nhân viên nếu không phải ADMIN
-                if (taiKhoan.VaiTro != "ADMIN")
-                {
-                    var taiKhoanNV = await _context.TaiKhoanNhanViens
-                        .Include(t => t.ThongTinNhanVien)
-                        .FirstOrDefaultAsync(t => t.MaTK == taiKhoan.MaTK);
-                    
-                    if (taiKhoanNV != null)
-                    {
-                        session.SetString("MaNV", taiKhoanNV.MaNV);
-                        session.SetString("MaChiNhanh", taiKhoanNV.ThongTinNhanVien.MaChiNhanh);
-                    }
-                }
+                return;
+            }
+
+            session.SetString("MaTK", taiKhoan.MaTK);
+            session.SetString("TenDangNhap", taiKhoan.TenDangNhap);
+            session.SetString("VaiTro", taiKhoan.VaiTro);
+            session.SetString("UserRole", taiKhoan.VaiTro);
+
+            session.Remove("MaNV");
+            session.Remove("MaChiNhanh");
+
+            if (taiKhoan.VaiTro == "ADMIN")
+            {
+                return;
+            }
+
+            var taiKhoanNV = await _context.TaiKhoanNhanViens
+                .Include(t => t.ThongTinNhanVien)
+                .FirstOrDefaultAsync(t => t.MaTK == taiKhoan.MaTK);
+
+            if (taiKhoanNV != null)
+            {
+                session.SetString("MaNV", taiKhoanNV.MaNV);
+                session.SetString("MaChiNhanh", taiKhoanNV.ThongTinNhanVien.MaChiNhanh);
             }
         }
 

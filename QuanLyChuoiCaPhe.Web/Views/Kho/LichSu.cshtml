@@ -2,6 +2,8 @@
 @model IEnumerable<LichSuKho>
 @{
     ViewData["Title"] = "Lịch sử Kho";
+    var currentRole = Context.Session.GetString("VaiTro");
+    var isQuanLy = string.Equals(currentRole, "QUAN_LY", StringComparison.OrdinalIgnoreCase);
 }
 
 <div class="container-fluid p-4">
@@ -22,7 +24,7 @@
             <form method="get" class="row g-3" id="historyFilterForm">
                 <div class="col-md-3">
                     <label class="form-label" style="font-size: 0.85rem; margin-bottom: 2px;">Chi nhánh</label>
-                    @if (User.IsInRole("QUAN_LY"))
+                    @if (isQuanLy)
                     {
                         var cnList = ViewBag.ChiNhanhs as List<ChiNhanh>;
                         var currentCn = cnList?.FirstOrDefault();

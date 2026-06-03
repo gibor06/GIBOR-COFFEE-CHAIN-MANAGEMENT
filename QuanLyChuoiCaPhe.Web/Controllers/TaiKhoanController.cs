@@ -4,8 +4,6 @@ using QuanLyChuoiCaPhe.Web.Data;
 using QuanLyChuoiCaPhe.Web.Filters;
 using QuanLyChuoiCaPhe.Web.Models;
 using QuanLyChuoiCaPhe.Web.Services;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace QuanLyChuoiCaPhe.Web.Controllers
@@ -14,21 +12,13 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
     public class TaiKhoanController : BaseController
     {
         private readonly QuanLyChuoiCaPheContext _context;
+        private readonly PasswordService _passwordService;
 
-        public TaiKhoanController(QuanLyChuoiCaPheContext context, AuthService authService) 
+        public TaiKhoanController(QuanLyChuoiCaPheContext context, AuthService authService, PasswordService passwordService)
             : base(authService)
         {
             _context = context;
-        }
-
-        // Helper method: Hash password using SHA256
-        private string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(hashedBytes);
-            }
+            _passwordService = passwordService;
         }
 
         // Helper method: Validate password strength
@@ -69,27 +59,20 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             return (true, string.Empty);
         }
 
+        private static bool IsValidRole(string role)
+        {
+            return role is "ADMIN" or "QUAN_LY" or "NHAN_VIEN" or "KHO" or "KE_TOAN";
+        }
+
         // Helper method: Generate next account ID
         private async Task<string> GenerateNextMaTK()
         {
-            var taiKhoans = await _context.HeThongTaiKhoans.AsNoTracking().ToListAsync();
-            int maxNumber = 0;
-            
-            foreach (var tk in taiKhoans)
-            {
-                var maTKTrim = tk.MaTK.Trim();
-                if (maTKTrim.StartsWith("TK"))
-                {
-                    var numberPart = maTKTrim.Substring(2);
-                    if (int.TryParse(numberPart, out int num))
-                    {
-                        if (num > maxNumber)
-                            maxNumber = num;
-                    }
-                }
-            }
-            
-            return $"TK{(maxNumber + 1):D3}";
+            var existingCodes = await _context.HeThongTaiKhoans
+                .AsNoTracking()
+                .Select(t => t.MaTK)
+                .ToListAsync();
+
+            return CodeGenerator.GenerateNext("TK", 8, existingCodes);
         }
 
         // GET: TaiKhoan/Index
@@ -211,6 +194,27 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 ModelState.AddModelError("confirmPassword", "Mật khẩu xác nhận không khớp!");
             }
 
+            if (!IsValidRole(model.VaiTro))
+            {
+                ModelState.AddModelError("VaiTro", "Vai trò không hợp lệ!");
+            }
+
+            if (model.VaiTro != "ADMIN" && string.IsNullOrWhiteSpace(maNV))
+            {
+                ModelState.AddModelError("maNV", "Tài khoản không phải ADMIN phải liên kết với nhân viên hợp lệ!");
+            }
+
+            if (!string.IsNullOrWhiteSpace(maNV))
+            {
+                var employeeExists = await _context.ThongTinNhanViens
+                    .AnyAsync(n => n.MaNV == maNV && n.TrangThai);
+
+                if (!employeeExists)
+                {
+                    ModelState.AddModelError("maNV", "Nhân viên liên kết không hợp lệ hoặc đã nghỉ việc!");
+                }
+            }
+
             // Check if username already exists
             var usernameExists = await _context.HeThongTaiKhoans
                 .AnyAsync(t => t.TenDangNhap.ToLower() == model.TenDangNhap.ToLower());
@@ -245,7 +249,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 model.NgayTao = DateTime.Now;
 
                 // Hash password
-                model.MatKhauHash = HashPassword(model.MatKhauHash);
+                model.MatKhauHash = _passwordService.HashPassword(model, model.MatKhauHash);
 
                 // Add account
                 _context.HeThongTaiKhoans.Add(model);
@@ -334,12 +338,25 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 return View(model);
             }
 
+            if (!IsValidRole(model.VaiTro))
+            {
+                ModelState.AddModelError("VaiTro", "Vai trò không hợp lệ!");
+                return View(model);
+            }
+
             try
             {
                 var taiKhoan = await _context.HeThongTaiKhoans.FindAsync(id);
                 if (taiKhoan == null)
                 {
                     return NotFound();
+                }
+
+                var hasEmployeeLink = await _context.TaiKhoanNhanViens.AnyAsync(t => t.MaTK == id);
+                if (model.VaiTro != "ADMIN" && !hasEmployeeLink)
+                {
+                    ModelState.AddModelError("VaiTro", "Tài khoản không phải ADMIN phải liên kết với nhân viên hợp lệ!");
+                    return View(model);
                 }
 
                 // Check if username already exists (except current account)
@@ -421,7 +438,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
                 }
 
                 // Hash and update password
-                taiKhoan.MatKhauHash = HashPassword(newPassword);
+                taiKhoan.MatKhauHash = _passwordService.HashPassword(taiKhoan, newPassword);
                 await _context.SaveChangesAsync();
 
                 TempData["Success"] = $"Đặt lại mật khẩu cho tài khoản '{taiKhoan.TenDangNhap}' thành công!";
@@ -436,6 +453,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         // POST: TaiKhoan/Delete/{id}
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string id)
         {
             try
@@ -488,6 +506,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
         // POST: TaiKhoan/ToggleStatus/{id}
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             try

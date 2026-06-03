@@ -11,7 +11,7 @@ namespace QuanLyChuoiCaPhe.Web.Models
         public int MaHanhTrinh { get; set; }
 
         [Required]
-        [StringLength(6)]
+        [StringLength(10)]
         public string MaDH { get; set; } = null!;
 
         [Required]

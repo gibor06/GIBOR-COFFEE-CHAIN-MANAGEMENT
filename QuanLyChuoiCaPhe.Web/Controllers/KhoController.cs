@@ -76,7 +76,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
-        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [RoleAuthorize("ADMIN", "KHO")]
         public async Task<IActionResult> GiaoDich()
         {
             var chiNhanhFilter = GetChiNhanhFilter();
@@ -101,7 +101,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
-        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [RoleAuthorize("ADMIN", "KHO")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GiaoDich(KhoGiaoDichViewModel model)
         {
@@ -291,6 +291,11 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTonKhoHienTai(string maNguyenLieu, string maChiNhanh)
         {
+            if (!CanAccessChiNhanh(maChiNhanh))
+            {
+                return Json(new { success = false, message = "Không có quyền xem tồn kho chi nhánh này." });
+            }
+
             var tonKho = await _context.TonKhoNguyenLieus
                 .Include(t => t.NguyenLieu)
                 .FirstOrDefaultAsync(t => t.MaChiNhanh == maChiNhanh && t.MaNguyenLieu == maNguyenLieu);
@@ -311,7 +316,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
-        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [RoleAuthorize("ADMIN", "KHO")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateQuick(string maChiNhanh, string maNguyenLieu, DateTime? hanSuDung, decimal soLuongDaDat)
         {
             var userRole = HttpContext.Session.GetString("UserRole") ?? CurrentVaiTro;
@@ -368,7 +374,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpGet]
-        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [RoleAuthorize("ADMIN", "KHO")]
         public async Task<IActionResult> KhoiTao()
         {
             var chiNhanhFilter = GetChiNhanhFilter();
@@ -391,7 +397,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
-        [RoleAuthorize("ADMIN", "KHO", "QUAN_LY")]
+        [RoleAuthorize("ADMIN", "KHO")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> KhoiTao(KhoKhoiTaoViewModel model)
         {

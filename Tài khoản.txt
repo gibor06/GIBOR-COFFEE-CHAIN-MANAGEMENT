@@ -1,26 +1,36 @@
 Tài khoản
 Trần Gia Bảo:
 	- Vai trò: admin
+	- mã tài khoản: TK00000051
+	- mã nhân viên: NV00000051
 	- tk: trangiabao
 	- mk: 123123
 
 Lê Quang Bảo:
 	- Vai trò: quản lý
+	- mã tài khoản: TK00000052
+	- mã nhân viên: NV00000052
 	- tk: lequangbao
 	- mk: 123123
 
 Trần Dương Gia Bảo:
 	- Vai trò: nhân viên
+	- mã tài khoản: TK00000053
+	- mã nhân viên: NV00000055
 	- tk: tranduonggiabao
 	- mk: 123123
 
 Nguyễn Ngọc Châu:
 	- Vai trò: kế toán
+	- mã tài khoản: TK00000054
+	- mã nhân viên: NV00000053
 	- tk: nguyenngocchau
 	- mk: 123123
 
 Nguyễn Thế Anh:
 	- Vai trò: kho
+	- mã tài khoản: TK00000055
+	- mã nhân viên: NV00000054
 	- tk: nguyentheanh
 	- mk: 123123
 

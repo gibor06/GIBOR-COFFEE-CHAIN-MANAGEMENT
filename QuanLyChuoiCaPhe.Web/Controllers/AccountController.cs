@@ -11,11 +11,13 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
     {
         private readonly AuthService _authService;
         private readonly QuanLyChuoiCaPheContext _context;
+        private readonly PasswordService _passwordService;
 
-        public AccountController(AuthService authService, QuanLyChuoiCaPheContext context)
+        public AccountController(AuthService authService, QuanLyChuoiCaPheContext context, PasswordService passwordService)
         {
             _authService = authService;
             _context = context;
+            _passwordService = passwordService;
         }
 
         [HttpGet]
@@ -81,6 +83,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Logout()
         {
             _authService.ClearSession();
@@ -145,7 +148,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
                 // Kiểm tra mật khẩu cũ
                 // TODO: So sánh với hash khi implement password hashing
-                if (taiKhoan.MatKhauHash != oldPassword)
+                if (!_passwordService.VerifyPassword(taiKhoan, oldPassword, out _))
                 {
                     TempData["Error"] = "Mật khẩu cũ không đúng!";
                     return View();
@@ -160,7 +163,7 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
 
                 // Cập nhật mật khẩu mới
                 // TODO: Hash password khi implement password hashing
-                taiKhoan.MatKhauHash = newPassword;
+                taiKhoan.MatKhauHash = _passwordService.HashPassword(taiKhoan, newPassword);
                 await _context.SaveChangesAsync();
 
                 TempData["Success"] = "Đổi mật khẩu thành công! Vui lòng đăng nhập lại.";

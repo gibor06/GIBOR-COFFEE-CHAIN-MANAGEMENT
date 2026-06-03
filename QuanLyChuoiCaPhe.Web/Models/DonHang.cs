@@ -7,7 +7,7 @@ namespace QuanLyChuoiCaPhe.Web.Models
     public class DonHang
     {
         [Key]
-        [StringLength(6)]
+        [StringLength(10)]
         public string MaDH { get; set; } = null!;
         
         [Required]

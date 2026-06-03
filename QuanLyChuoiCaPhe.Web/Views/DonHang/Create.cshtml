@@ -4,6 +4,7 @@
     var sanPhamGroups = (ViewBag.BienThes as List<BienTheSanPham>)
         .GroupBy(bt => bt.SanPham)
         .ToList();
+    var priceByBienThe = ViewBag.BienThePrices as Dictionary<string, decimal> ?? new Dictionary<string, decimal>();
 }
 
 <style>
@@ -120,18 +121,25 @@
                                             <h6 class="product-name text-center">@sp.TenSanPham</h6>
                                             <p class="product-price text-center mb-2">
                                                 @{
-                                                    var chiNhanh = ViewBag.CurrentTenChiNhanh;
-                                                    var basePrice = sp.GiaCoBan;
+                                                    var minPrice = bienThes
+                                                        .Select(bt => priceByBienThe.TryGetValue(bt.MaBienThe, out var price)
+                                                            ? price
+                                                            : sp.GiaCoBan + bt.GiaCongThem)
+                                                        .Min();
                                                 }
-                                                @basePrice.ToString("N0") đ
+                                                @minPrice.ToString("N0") đ
                                             </p>
                                             <div class="d-flex justify-content-center gap-1 flex-wrap">
                                                 @foreach (var bt in bienThes)
                                                 {
+                                                    var variantPrice = priceByBienThe.TryGetValue(bt.MaBienThe, out var price)
+                                                        ? price
+                                                        : sp.GiaCoBan + bt.GiaCongThem;
                                                     <span class="badge bg-secondary size-badge" 
                                                           data-product="@sp.MaSanPham"
                                                           data-bienthe="@bt.MaBienThe"
                                                           data-size="@bt.Size"
+                                                          title="@variantPrice.ToString("N0") đ"
                                                           onclick="event.stopPropagation(); selectSize('@bt.MaBienThe', '@sp.TenSanPham', '@bt.Size', this)">
                                                         @bt.Size
                                                     </span>
@@ -525,25 +533,23 @@
                 return;
             }
 
-            // Add cart items to form
+            this.querySelectorAll('input[data-cart-field="true"]').forEach(input => input.remove());
+
+            // Add cart items to form. Unit price is intentionally not posted; server calculates it from DB.
             cart.forEach((item, index) => {
                 const input1 = document.createElement('input');
                 input1.type = 'hidden';
                 input1.name = `ChiTietDonHangs[${index}].MaBienThe`;
                 input1.value = item.maBienThe;
+                input1.dataset.cartField = 'true';
                 this.appendChild(input1);
 
                 const input2 = document.createElement('input');
                 input2.type = 'hidden';
                 input2.name = `ChiTietDonHangs[${index}].SoLuong`;
                 input2.value = item.soLuong;
+                input2.dataset.cartField = 'true';
                 this.appendChild(input2);
-
-                const input3 = document.createElement('input');
-                input3.type = 'hidden';
-                input3.name = `ChiTietDonHangs[${index}].DonGia`;
-                input3.value = item.donGia;
-                this.appendChild(input3);
             });
         });
 
@@ -552,7 +558,7 @@
             // Ctrl/Cmd + Enter to submit
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 if (cart.length > 0) {
-                    document.getElementById('donHangForm').submit();
+                    document.getElementById('donHangForm').requestSubmit();
                 }
             }
             // Escape to clear search

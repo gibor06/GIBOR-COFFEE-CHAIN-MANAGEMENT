@@ -3,6 +3,8 @@
     ViewData["Title"] = "Quản lý Chi nhánh";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="bi bi-shop"></i> Quản lý Chi nhánh</h2>
@@ -108,7 +110,7 @@
     <script>
         function toggleStatus(id) {
             if (confirm('Bạn có chắc muốn thay đổi trạng thái?')) {
-                fetch('/ChiNhanh/ToggleStatus?id=' + id, {
+                fetch('/ChiNhanh/ToggleStatus?id=' + encodeURIComponent(id), {
                     method: 'POST',
                     headers: {
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value

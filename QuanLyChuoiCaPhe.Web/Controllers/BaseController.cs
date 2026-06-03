@@ -21,6 +21,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
         protected bool IsAdmin => _authService.IsAdmin();
         protected bool IsQuanLy => _authService.IsQuanLy();
         protected bool IsNhanVien => _authService.IsNhanVien();
+        protected bool IsKho => CurrentVaiTro == "KHO";
+        protected bool IsKeToan => CurrentVaiTro == "KE_TOAN";
 
         /// <summary>
         /// Kiểm tra xem user có quyền truy cập chi nhánh này không
@@ -66,6 +68,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             ViewBag.IsAdmin = IsAdmin;
             ViewBag.IsQuanLy = IsQuanLy;
             ViewBag.IsNhanVien = IsNhanVien;
+            ViewBag.IsKho = IsKho;
+            ViewBag.IsKeToan = IsKeToan;
 
             base.OnActionExecuting(context);
         }
