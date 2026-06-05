@@ -11,13 +11,28 @@
 /* =============================================================================================================== */
 
 /* ========================= 0. TẠO CSDL ========================= */
-IF DB_ID(N'QuanLyChuoiCaPhe') IS NULL
-BEGIN
-    CREATE DATABASE QuanLyChuoiCaPhe;
-END
+-- Tạo cơ sở dữ liệu --
+CREATE DATABASE QuanLyChuoiCaPhe
+ON PRIMARY
+(
+	NAME = 'DB_QuanLyChuoiCaPhe',
+	FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\DB_QuanLyChuoiCaPhe.mdf',
+	SIZE = 10MB,
+	MAXSIZE = 30MB,
+	FILEGROWTH = 10%
+)
+LOG ON
+(
+	NAME = 'DB_QuanLyChuoiCaPhe_Log',
+	FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\DB_QuanLyChuoiCaPhe_Log.ldf',
+	SIZE = 10MB,
+	MAXSIZE = 30MB,
+	FILEGROWTH = 10%
+)
 GO
 
-USE QuanLyChuoiCaPhe;
+-- Sử dụng cơ sở dữ liệu --
+USE QuanLyChuoiCaPhe
 GO
 
 SET QUOTED_IDENTIFIER ON;
@@ -648,8 +663,6 @@ CREATE TABLE dbo.LichSuKho
 );
 GO
 
--- KẾT THÚC CHỈNH SỬA BỞI TRẦN GIA BẢO
-
 /* =============================================================================================================== */
 
                                             -- CODE BỞI TRẦN DƯƠNG GIA BẢO --
@@ -918,7 +931,7 @@ BEGIN
         WHERE nv.TrangThai = 0
     )
     BEGIN
-        THROW 50001, N'Không thể phân ca cho nhân viên đã nghỉ việc.', 1;
+        RAISERROR(N'Không thể phân ca cho nhân viên đã nghỉ việc.', 16, 1);
     END;
 
     IF EXISTS (
@@ -928,7 +941,7 @@ BEGIN
         WHERE i.NgayLamViec < nv.NgayVaoLam
     )
     BEGIN
-        THROW 50002, N'Ngày làm việc phải lớn hơn hoặc bằng ngày vào làm.', 1;
+        RAISERROR(N'Ngày làm việc phải lớn hơn hoặc bằng ngày vào làm.', 16, 1);
     END;
 END;
 GO
@@ -958,7 +971,7 @@ BEGIN
             WHERE l.TrangThai IN (N'Hủy ca', N'Nghỉ phép')
         )
         BEGIN
-            THROW 50003, N'Không thể chấm công cho ca hủy hoặc nghỉ phép.', 1;
+            RAISERROR(N'Không thể chấm công cho ca hủy hoặc nghỉ phép.', 16, 1);
         END;
 
         ;WITH DuLieuXuLy AS
@@ -1075,7 +1088,7 @@ BEGIN
         WHERE bl.TrangThai = N'Đã thanh toán'
     )
     BEGIN
-        THROW 50004, N'Bảng lương đã thanh toán thì không được phép chỉnh sửa.', 1;
+        RAISERROR(N'Bảng lương đã thanh toán thì không được phép chỉnh sửa.', 16, 1);
     END;
 
     UPDATE bl
@@ -1139,7 +1152,7 @@ BEGIN
           AND tk.SoLuongTon < i.SoLuong
     )
     BEGIN
-        THROW 50005, N'Số lượng tồn kho không đủ để thực hiện giao dịch xuất/trừ.', 1;
+        RAISERROR(N'Số lượng tồn kho không đủ để thực hiện giao dịch xuất/trừ.', 16, 1);
     END;
 
     UPDATE tk
@@ -1247,6 +1260,9 @@ END;
 GO
 
 /* =============================================================================================================== */
+
+/* CODE BỞI NGUYỄN NGỌC CHÂU */
+
 CREATE TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh
 ON dbo.SanPham
 AFTER INSERT
@@ -1346,7 +1362,7 @@ BEGIN
             WHERE MaChiNhanh = @MaChiNhanh AND MaNguyenLieu = @MaNguyenLieu
         )
         BEGIN
-            THROW 50010, N'Chưa khởi tạo tồn kho cho chi nhánh và nguyên liệu này.', 1;
+            RAISERROR(N'Chưa khởi tạo tồn kho cho chi nhánh và nguyên liệu này.', 16, 1);
         END;
 
         INSERT INTO dbo.LichSuKho(LogID, MaChiNhanh, MaNguyenLieu, LoaiGiaoDich, SoLuong, GhiChu)
@@ -1356,7 +1372,7 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-        THROW;
+        DECLARE @ErrMsg NVARCHAR(4000), @ErrSeverity INT, @ErrState INT; SELECT @ErrMsg = ERROR_MESSAGE(), @ErrSeverity = ERROR_SEVERITY(), @ErrState = ERROR_STATE(); RAISERROR(@ErrMsg, @ErrSeverity, @ErrState);
     END CATCH
 END;
 GO
@@ -1398,22 +1414,22 @@ BEGIN
 
         IF NOT EXISTS (SELECT 1 FROM @ChiTiet)
         BEGIN
-            THROW 50030, N'Vui lòng thêm ít nhất một sản phẩm.', 1;
+            RAISERROR(N'Vui lòng thêm ít nhất một sản phẩm.', 16, 1);
         END;
 
         IF EXISTS (SELECT 1 FROM @ChiTiet WHERE SoLuong <= 0)
         BEGIN
-            THROW 50031, N'Số lượng không hợp lệ.', 1;
+            RAISERROR(N'Số lượng không hợp lệ.', 16, 1);
         END;
 
         IF @GiamGiaThuCong < 0 OR @DiemSuDung < 0
         BEGIN
-            THROW 50032, N'Giảm giá thủ công và điểm sử dụng phải lớn hơn hoặc bằng 0.', 1;
+            RAISERROR(N'Giảm giá thủ công và điểm sử dụng phải lớn hơn hoặc bằng 0.', 16, 1);
         END;
 
         IF @MaKH IS NULL AND @DiemSuDung > 0
         BEGIN
-            THROW 50033, N'Khách vãng lai không được sử dụng điểm.', 1;
+            RAISERROR(N'Khách vãng lai không được sử dụng điểm.', 16, 1);
         END;
 
         DECLARE @DiemHienCo INT = NULL;
@@ -1426,12 +1442,12 @@ BEGIN
 
             IF @DiemHienCo IS NULL
             BEGIN
-                THROW 50034, N'Khách hàng không tồn tại.', 1;
+                RAISERROR(N'Khách hàng không tồn tại.', 16, 1);
             END;
 
             IF @DiemSuDung > @DiemHienCo
             BEGIN
-                THROW 50035, N'Số điểm sử dụng không được vượt quá điểm hiện có.', 1;
+                RAISERROR(N'Số điểm sử dụng không được vượt quá điểm hiện có.', 16, 1);
             END;
         END;
 
@@ -1456,7 +1472,7 @@ BEGIN
             )
         )
         BEGIN
-            THROW 50036, N'Sản phẩm không tồn tại, ngừng bán hoặc không bán tại chi nhánh này.', 1;
+            RAISERROR(N'Sản phẩm không tồn tại, ngừng bán hoặc không bán tại chi nhánh này.', 16, 1);
         END;
 
         INSERT INTO dbo.DonHang
@@ -1536,7 +1552,7 @@ BEGIN
 
         IF @TongTien <= 0
         BEGIN
-            THROW 50037, N'Không thể xác định đơn giá sản phẩm.', 1;
+            RAISERROR(N'Không thể xác định đơn giá sản phẩm.', 16, 1);
         END;
 
         DECLARE @TienGiamTuDiem DECIMAL(18,2) = @DiemSuDung * 100;
@@ -1544,12 +1560,12 @@ BEGIN
 
         IF @TienGiamTuDiem > 10000
         BEGIN
-            THROW 50039, N'Tiền giảm từ điểm tối đa là 10.000đ cho mỗi đơn hàng.', 1;
+            RAISERROR(N'Tiền giảm từ điểm tối đa là 10.000đ cho mỗi đơn hàng.', 16, 1);
         END;
 
         IF @TongGiamGia > @TongTien
         BEGIN
-            THROW 50038, N'Tổng giảm giá không được vượt quá tổng tiền đơn hàng.', 1;
+            RAISERROR(N'Tổng giảm giá không được vượt quá tổng tiền đơn hàng.', 16, 1);
         END;
 
         DECLARE @ThanhTien DECIMAL(18,2) = @TongTien - @TongGiamGia;
@@ -1582,7 +1598,7 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
+        DECLARE @ErrMsg NVARCHAR(4000), @ErrSeverity INT, @ErrState INT; SELECT @ErrMsg = ERROR_MESSAGE(), @ErrSeverity = ERROR_SEVERITY(), @ErrState = ERROR_STATE(); RAISERROR(@ErrMsg, @ErrSeverity, @ErrState);
     END CATCH
 END;
 GO
@@ -1642,6 +1658,7 @@ END;
 GO
 
 /* =============================================================================================================== */
+/*CODE BỞI NGUYỄN NGỌC CHÂU*/
 CREATE PROCEDURE dbo.sp_DongBoSanPhamVaoChiNhanh
     @MaSanPham CHAR(10),
     @GiaBanMacDinh DECIMAL(18,2) = NULL
@@ -1651,7 +1668,7 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM dbo.SanPham WHERE MaSanPham = @MaSanPham)
     BEGIN
-        THROW 50040, N'Sản phẩm không tồn tại.', 1;
+        RAISERROR(N'Sản phẩm không tồn tại.', 16, 1);
     END;
 
     SELECT @GiaBanMacDinh = ISNULL(@GiaBanMacDinh, GiaCoBan)
@@ -1660,7 +1677,7 @@ BEGIN
 
     IF @GiaBanMacDinh IS NULL OR @GiaBanMacDinh <= 0
     BEGIN
-        THROW 50041, N'Giá bán mặc định không hợp lệ.', 1;
+        RAISERROR(N'Giá bán mặc định không hợp lệ.', 16, 1);
     END;
 
     INSERT INTO dbo.SanPham_ChiNhanh (MaChiNhanh, MaSanPham, GiaBan, TrangThai)
@@ -1683,6 +1700,8 @@ BEGIN
 END;
 GO
 
+
+/*CODE BỞI NGUYỄN NGỌC CHÂU*/
 CREATE PROCEDURE dbo.sp_DongBoTatCaSanPham
 AS
 BEGIN
@@ -3714,7 +3733,7 @@ IF EXISTS (
        OR spcn.TrangThai = 0
 )
 BEGIN
-    THROW 51000, N'Có chi tiết đơn hàng không tìm được giá hợp lệ từ sản phẩm/biến thể/menu chi nhánh.', 1;
+    RAISERROR(N'Có chi tiết đơn hàng không tìm được giá hợp lệ từ sản phẩm/biến thể/menu chi nhánh.', 16, 1);
 END;
 GO
 
@@ -3776,35 +3795,35 @@ GO
 
 IF EXISTS (SELECT MaTK FROM dbo.HeThongTaiKhoan GROUP BY MaTK HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51003, N'Trùng khóa HeThongTaiKhoan.MaTK.', 1;
+    RAISERROR(N'Trùng khóa HeThongTaiKhoan.MaTK.', 16, 1);
 END;
 IF EXISTS (SELECT TenDangNhap FROM dbo.HeThongTaiKhoan GROUP BY TenDangNhap HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51004, N'Trùng HeThongTaiKhoan.TenDangNhap.', 1;
+    RAISERROR(N'Trùng HeThongTaiKhoan.TenDangNhap.', 16, 1);
 END;
 IF EXISTS (SELECT MaNV FROM dbo.ThongTinNhanVien GROUP BY MaNV HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51005, N'Trùng khóa ThongTinNhanVien.MaNV.', 1;
+    RAISERROR(N'Trùng khóa ThongTinNhanVien.MaNV.', 16, 1);
 END;
 IF EXISTS (SELECT MaChiNhanh FROM dbo.ChiNhanh GROUP BY MaChiNhanh HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51006, N'Trùng khóa ChiNhanh.MaChiNhanh.', 1;
+    RAISERROR(N'Trùng khóa ChiNhanh.MaChiNhanh.', 16, 1);
 END;
 IF EXISTS (SELECT MaSanPham FROM dbo.SanPham GROUP BY MaSanPham HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51007, N'Trùng khóa SanPham.MaSanPham.', 1;
+    RAISERROR(N'Trùng khóa SanPham.MaSanPham.', 16, 1);
 END;
 IF EXISTS (SELECT MaBienThe FROM dbo.BienTheSanPham GROUP BY MaBienThe HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51008, N'Trùng khóa BienTheSanPham.MaBienThe.', 1;
+    RAISERROR(N'Trùng khóa BienTheSanPham.MaBienThe.', 16, 1);
 END;
 IF EXISTS (SELECT MaDH FROM dbo.DonHang GROUP BY MaDH HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51009, N'Trùng khóa DonHang.MaDH.', 1;
+    RAISERROR(N'Trùng khóa DonHang.MaDH.', 16, 1);
 END;
 IF EXISTS (SELECT MaCTDH FROM dbo.ChiTietDonHang GROUP BY MaCTDH HAVING COUNT(*) > 1)
 BEGIN
-    THROW 51019, N'Trùng khóa ChiTietDonHang.MaCTDH.', 1;
+    RAISERROR(N'Trùng khóa ChiTietDonHang.MaCTDH.', 16, 1);
 END;
 GO
 
@@ -3813,7 +3832,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaTK)) <> 10 OR LEFT(MaTK, 2) <> 'TK' OR TRY_CONVERT(INT, SUBSTRING(MaTK, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51020, N'Có MaTK không đúng chuẩn TK + 8 số.', 1;
+    RAISERROR(N'Có MaTK không đúng chuẩn TK + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3821,7 +3840,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaNV)) <> 10 OR LEFT(MaNV, 2) <> 'NV' OR TRY_CONVERT(INT, SUBSTRING(MaNV, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51021, N'Có MaNV không đúng chuẩn NV + 8 số.', 1;
+    RAISERROR(N'Có MaNV không đúng chuẩn NV + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3829,7 +3848,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaChiNhanh)) <> 10 OR LEFT(MaChiNhanh, 2) <> 'CN' OR TRY_CONVERT(INT, SUBSTRING(MaChiNhanh, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51022, N'Có MaChiNhanh không đúng chuẩn CN + 8 số.', 1;
+    RAISERROR(N'Có MaChiNhanh không đúng chuẩn CN + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3837,7 +3856,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaSanPham)) <> 10 OR LEFT(MaSanPham, 2) <> 'SP' OR TRY_CONVERT(INT, SUBSTRING(MaSanPham, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51023, N'Có MaSanPham không đúng chuẩn SP + 8 số.', 1;
+    RAISERROR(N'Có MaSanPham không đúng chuẩn SP + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3845,7 +3864,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaBienThe)) <> 10 OR LEFT(MaBienThe, 2) <> 'BT' OR TRY_CONVERT(INT, SUBSTRING(MaBienThe, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51024, N'Có MaBienThe không đúng chuẩn BT + 8 số.', 1;
+    RAISERROR(N'Có MaBienThe không đúng chuẩn BT + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3853,7 +3872,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaDH)) <> 10 OR LEFT(MaDH, 2) <> 'DH' OR TRY_CONVERT(INT, SUBSTRING(MaDH, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51025, N'Có MaDH không đúng chuẩn DH + 8 số.', 1;
+    RAISERROR(N'Có MaDH không đúng chuẩn DH + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3861,7 +3880,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(MaCTDH)) <> 10 OR LEFT(MaCTDH, 2) <> 'CT' OR TRY_CONVERT(INT, SUBSTRING(MaCTDH, 3, 8)) IS NULL
 )
 BEGIN
-    THROW 51026, N'Có MaCTDH không đúng chuẩn CT + 8 số.', 1;
+    RAISERROR(N'Có MaCTDH không đúng chuẩn CT + 8 số.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3869,7 +3888,7 @@ IF EXISTS (
     WHERE LEN(RTRIM(LogID)) <> 10 OR LEFT(LogID, 1) <> 'L' OR TRY_CONVERT(INT, SUBSTRING(LogID, 2, 9)) IS NULL
 )
 BEGIN
-    THROW 51027, N'Có LichSuKho.LogID không đúng chuẩn L + 9 số.', 1;
+    RAISERROR(N'Có LichSuKho.LogID không đúng chuẩn L + 9 số.', 16, 1);
 END;
 GO
 
@@ -3879,7 +3898,7 @@ IF EXISTS (
     WHERE tk.VaiTro NOT IN (N'ADMIN', N'QUAN_LY', N'NHAN_VIEN', N'KHO', N'KE_TOAN')
 )
 BEGIN
-    THROW 51028, N'Có tài khoản có vai trò không hợp lệ.', 1;
+    RAISERROR(N'Có tài khoản có vai trò không hợp lệ.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3891,7 +3910,7 @@ IF EXISTS (
     HAVING COUNT(tknv.MaNV) <> 1
 )
 BEGIN
-    THROW 51010, N'Có tài khoản non-admin chưa liên kết đúng một nhân viên.', 1;
+    RAISERROR(N'Có tài khoản non-admin chưa liên kết đúng một nhân viên.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3905,7 +3924,7 @@ IF EXISTS (
       AND (nv.TrangThai = 0 OR nv.NgayNghiViec IS NOT NULL OR cn.MaChiNhanh IS NULL OR cn.TrangThai = 0)
 )
 BEGIN
-    THROW 51011, N'Có tài khoản đang hoạt động liên kết với nhân viên/chi nhánh không hợp lệ.', 1;
+    RAISERROR(N'Có tài khoản đang hoạt động liên kết với nhân viên/chi nhánh không hợp lệ.', 16, 1);
 END;
 GO
 
@@ -3921,7 +3940,7 @@ IF EXISTS (
       )
 )
 BEGIN
-    THROW 51012, N'Có sản phẩm đang hoạt động nhưng không có biến thể hoạt động.', 1;
+    RAISERROR(N'Có sản phẩm đang hoạt động nhưng không có biến thể hoạt động.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3938,7 +3957,7 @@ IF EXISTS (
       )
 )
 BEGIN
-    THROW 51013, N'Có sản phẩm đang hoạt động chưa được đồng bộ vào chi nhánh đang hoạt động.', 1;
+    RAISERROR(N'Có sản phẩm đang hoạt động chưa được đồng bộ vào chi nhánh đang hoạt động.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3953,7 +3972,7 @@ IF EXISTS (
     WHERE ct.DonGia <> spcn.GiaBan + bt.GiaCongThem
 )
 BEGIN
-    THROW 51014, N'Có chi tiết đơn hàng có đơn giá lệch với dữ liệu sản phẩm/menu chi nhánh.', 1;
+    RAISERROR(N'Có chi tiết đơn hàng có đơn giá lệch với dữ liệu sản phẩm/menu chi nhánh.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3967,7 +3986,7 @@ IF EXISTS (
     WHERE dh.TongTien <> x.TongTienTinhLai
 )
 BEGIN
-    THROW 51015, N'Có đơn hàng có tổng tiền lệch với chi tiết đơn hàng.', 1;
+    RAISERROR(N'Có đơn hàng có tổng tiền lệch với chi tiết đơn hàng.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3977,7 +3996,7 @@ IF EXISTS (
       AND (TongTien <= 0 OR GiamGia < 0 OR GiamGia > TongTien)
 )
 BEGIN
-    THROW 51016, N'Có đơn hoàn tất có tổng tiền/giảm giá không hợp lệ.', 1;
+    RAISERROR(N'Có đơn hoàn tất có tổng tiền/giảm giá không hợp lệ.', 16, 1);
 END;
 
 IF EXISTS (
@@ -3989,7 +4008,7 @@ IF EXISTS (
     END
 )
 BEGIN
-    THROW 51017, N'Có đơn hàng có điểm cộng không khớp với thành tiền sau giảm.', 1;
+    RAISERROR(N'Có đơn hàng có điểm cộng không khớp với thành tiền sau giảm.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4004,7 +4023,7 @@ IF EXISTS (
     WHERE kh.DiemTichLuy <> x.DiemDungSauDon
 )
 BEGIN
-    THROW 51018, N'Có khách hàng có điểm tích lũy không khớp với lịch sử đơn hàng.', 1;
+    RAISERROR(N'Có khách hàng có điểm tích lũy không khớp với lịch sử đơn hàng.', 16, 1);
 END;
 GO
 
@@ -4022,7 +4041,7 @@ IF EXISTS (
       )
 )
 BEGIN
-    THROW 51017, N'Có chi nhánh/nguyên liệu đang hoạt động chưa được khởi tạo tồn kho.', 1;
+    RAISERROR(N'Có chi nhánh/nguyên liệu đang hoạt động chưa được khởi tạo tồn kho.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4036,12 +4055,12 @@ IF EXISTS (
     )
 )
 BEGIN
-    THROW 51029, N'Có lịch sử kho tham chiếu cặp chi nhánh/nguyên liệu chưa tồn tại trong tồn kho.', 1;
+    RAISERROR(N'Có lịch sử kho tham chiếu cặp chi nhánh/nguyên liệu chưa tồn tại trong tồn kho.', 16, 1);
 END;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.vw_MenuChiNhanh)
 BEGIN
-    THROW 51018, N'vw_MenuChiNhanh không có dữ liệu. POS/menu sẽ không hiển thị sản phẩm.', 1;
+    RAISERROR(N'vw_MenuChiNhanh không có dữ liệu. POS/menu sẽ không hiển thị sản phẩm.', 16, 1);
 END;
 GO
 
@@ -4056,7 +4075,7 @@ IF EXISTS (
        OR (dh.MaKH IS NOT NULL AND kh.MaKH IS NULL)
 )
 BEGIN
-    THROW 51030, N'Có đơn hàng thiếu khóa ngoại chi nhánh/nhân viên/khách hàng.', 1;
+    RAISERROR(N'Có đơn hàng thiếu khóa ngoại chi nhánh/nhân viên/khách hàng.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4067,7 +4086,7 @@ IF EXISTS (
     WHERE dh.MaDH IS NULL OR bt.MaBienThe IS NULL
 )
 BEGIN
-    THROW 51031, N'Có chi tiết đơn hàng thiếu khóa ngoại đơn hàng/biến thể.', 1;
+    RAISERROR(N'Có chi tiết đơn hàng thiếu khóa ngoại đơn hàng/biến thể.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4077,7 +4096,7 @@ IF EXISTS (
     WHERE nv.MaNV IS NULL
 )
 BEGIN
-    THROW 51032, N'Có bảng lương tham chiếu nhân viên không tồn tại.', 1;
+    RAISERROR(N'Có bảng lương tham chiếu nhân viên không tồn tại.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4088,7 +4107,7 @@ IF EXISTS (
     WHERE nv.MaNV IS NULL OR ca.MaCa IS NULL
 )
 BEGIN
-    THROW 51033, N'Có lịch phân công tham chiếu nhân viên/ca làm không tồn tại.', 1;
+    RAISERROR(N'Có lịch phân công tham chiếu nhân viên/ca làm không tồn tại.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4099,7 +4118,7 @@ IF EXISTS (
     WHERE nv.MaNV IS NULL OR lpc.MaLich IS NULL
 )
 BEGIN
-    THROW 51034, N'Có chấm công tham chiếu nhân viên/lịch phân công không tồn tại.', 1;
+    RAISERROR(N'Có chấm công tham chiếu nhân viên/lịch phân công không tồn tại.', 16, 1);
 END;
 
 IF EXISTS (
@@ -4110,7 +4129,7 @@ IF EXISTS (
     WHERE cc.MaChamCong IS NULL OR nv.MaNV IS NULL
 )
 BEGIN
-    THROW 51035, N'Có phạt đi muộn tham chiếu chấm công/nhân viên không tồn tại.', 1;
+    RAISERROR(N'Có phạt đi muộn tham chiếu chấm công/nhân viên không tồn tại.', 16, 1);
 END;
 GO
 
@@ -4186,3 +4205,77 @@ ORDER BY dm.MaDanhMuc;
 GO
 
 
+/* ========================= 17. SAO LƯU - PHỤC HỒI ========================= */
+/*
+
+-- Nửa đêm (ví dụ 23h00 hoặc 00h00) Chủ Nhật:
+-- A. FULL BACKUP
+BACKUP DATABASE QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
+WITH INIT
+
+-- 17h hằng ngày: Chạy Differential Backup
+-- B. DIFFERENTIAL BACKUP
+BACKUP DATABASE QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_DIFF.bak'
+WITH DIFFERENTIAL, INIT
+
+-- C. LOG BACKUP
+BACKUP LOG QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_LOG.trn'
+WITH INIT
+
+
+-- D. PHỤC HỒI CSDL
+BACKUP LOG QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_Tail.trn'
+WITH INIT
+
+RESTORE DATABASE QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
+WITH NORECOVERY;
+
+RESTORE DATABASE QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_DIFF.bak'
+WITH NORECOVERY;
+
+RESTORE LOG QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_Tail.trn'
+WITH RECOVERY
+*/
+GO
+
+/* ========================= 18. QUẢN TRỊ NGƯỜI DÙNG - PHÂN QUYỀN ========================= */
+/*
+
+USE QuanLyChuoiCaPhe;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_admin')
+    CREATE USER qlcf_admin FOR LOGIN qlcf_admin;
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_staff')
+    CREATE USER qlcf_staff FOR LOGIN qlcf_staff;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_quanly')
+    CREATE ROLE role_quanly;
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_nhanvien')
+    CREATE ROLE role_nhanvien;
+GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DonHang TO role_quanly;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ChiTietDonHang TO role_quanly;
+GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_quanly;
+GRANT SELECT ON dbo.vw_BangLuongTongHop TO role_quanly;
+GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_quanly;
+GRANT EXECUTE ON dbo.sp_GhiNhanGiaoDichKho TO role_quanly;
+
+GRANT SELECT, INSERT ON dbo.DonHang TO role_nhanvien;
+GRANT SELECT, INSERT ON dbo.ChiTietDonHang TO role_nhanvien;
+GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_nhanvien;
+GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_nhanvien;
+
+ALTER ROLE role_quanly ADD MEMBER qlcf_admin;
+ALTER ROLE role_nhanvien ADD MEMBER qlcf_staff;
+*/
+GO
