@@ -11,13 +11,28 @@
 /* =============================================================================================================== */
 
 /* ========================= 0. TẠO CSDL ========================= */
-IF DB_ID(N'QuanLyChuoiCaPhe') IS NULL
-BEGIN
-    CREATE DATABASE QuanLyChuoiCaPhe;
-END
+-- Tạo cơ sở dữ liệu --
+CREATE DATABASE QuanLyChuoiCaPhe
+ON PRIMARY
+(
+	NAME = 'DB_QuanLyChuoiCaPhe',
+	FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\DB_QuanLyChuoiCaPhe.mdf',
+	SIZE = 10MB,
+	MAXSIZE = 30MB,
+	FILEGROWTH = 10%
+)
+LOG ON
+(
+	NAME = 'DB_QuanLyChuoiCaPhe_Log',
+	FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\DB_QuanLyChuoiCaPhe_Log.ldf',
+	SIZE = 10MB,
+	MAXSIZE = 30MB,
+	FILEGROWTH = 10%
+)
 GO
 
-USE QuanLyChuoiCaPhe;
+-- Sử dụng cơ sở dữ liệu --
+USE QuanLyChuoiCaPhe
 GO
 
 SET QUOTED_IDENTIFIER ON;
@@ -654,6 +669,7 @@ GO
 
 /* =============================================================================================================== */
 /* ========================= 7. KHÁCH HÀNG - ĐƠN HÀNG ========================= */
+-- Trần Dương Gia Bảo code phần này: Bảng khách hàng lưu điểm tích lũy để thu ngân dùng khi thanh toán
 CREATE TABLE dbo.KhachHang
 (
     MaKH            CHAR(6)         NOT NULL,
@@ -667,6 +683,7 @@ CREATE TABLE dbo.KhachHang
 );
 GO
 
+-- Trần Dương Gia Bảo code phần này: Bảng đơn hàng có tách giảm giá thủ công, điểm sử dụng và điểm cộng
 CREATE TABLE dbo.DonHang
 (
     MaDH                CHAR(10)        NOT NULL,
@@ -702,7 +719,24 @@ CREATE TABLE dbo.DonHang
         )
     ),
     CONSTRAINT CHK_DonHang_TrangThai CHECK (TrangThai IN (N'Khởi tạo', N'Hoàn tất', N'Hủy')),
-    CONSTRAINT CHK_DonHang_PTTT CHECK (PhuongThucThanhToan IN (N'Tiền mặt', N'QR', N'Thẻ'))
+    CONSTRAINT CHK_DonHang_PTTT CHECK (PhuongThucThanhToan IN (N'Tiền mặt', N'Thẻ', N'Chuyển khoản', N'QR', N'Ví điện tử'))
+);
+GO
+
+IF EXISTS (SELECT * FROM sys.objects WHERE name = 'CHK_DonHang_Tien' AND type = 'C')
+BEGIN
+    ALTER TABLE dbo.DonHang DROP CONSTRAINT CHK_DonHang_Tien;
+END
+GO
+
+ALTER TABLE dbo.DonHang ADD CONSTRAINT CHK_DonHang_Tien CHECK (
+    -- Tổng tiền sau cùng của hóa đơn tuyệt đối không được là số âm
+    TongTien >= 0 
+    -- Số tiền chiết khấu giảm giá của Voucher không được nhỏ hơn 0
+    AND GiamGia >= 0 
+    -- Cho phép số tiền giảm giá lớn hơn tổng tiền khi đơn hàng ở trạng thái nháp (Khởi tạo) hoặc bị Hủy.
+    -- Chỉ bắt buộc kiểm tra số tiền giảm giá không vượt quá tổng tiền gốc khi đơn hàng đã chuyển trạng thái Hoàn tất.
+    AND (TrangThai = N'Khởi tạo' OR TrangThai = N'Hủy' OR GiamGia <= TongTien)
 );
 GO
 
@@ -721,6 +755,12 @@ CREATE TABLE dbo.ChiTietDonHang
     CONSTRAINT CHK_ChiTietDonHang_SoLuong CHECK (SoLuong > 0),
     CONSTRAINT CHK_ChiTietDonHang_DonGia CHECK (DonGia > 0)
 );
+GO
+
+IF OBJECT_ID('dbo.HanhTrinhDonHang', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE dbo.HanhTrinhDonHang;
+END
 GO
 
 CREATE TABLE dbo.HanhTrinhDonHang
@@ -772,9 +812,6 @@ END;
 GO
 /* =============================================================================================================== */
 
-                                            -- CODE BỞI TRẦN DƯƠNG GIA BẢO --
-
-/* =============================================================================================================== */
 CREATE FUNCTION dbo.fn_TinhTongTienDonHang
 (
     @MaDH CHAR(10)
@@ -790,6 +827,7 @@ BEGIN
 END;
 GO
 
+-- Trần Dương Gia Bảo code phần này: Hàm tính điểm cộng từ thành tiền thực thanh toán
 CREATE FUNCTION dbo.fn_TinhDiemTichLuyDonHang
 (
     @TongSauGiam DECIMAL(18,2)
@@ -1181,6 +1219,7 @@ GO
                                             -- CODE BỞI TRẦN DƯƠNG GIA BẢO --
 
 /* =============================================================================================================== */
+-- Trần Dương Gia Bảo code phần này: Trigger tự động cập nhật điểm tích lũy khi đơn hàng hoàn tất
 CREATE TRIGGER dbo.TRG_DonHang_CapNhatDiem
 ON dbo.DonHang
 AFTER INSERT, UPDATE, DELETE
@@ -1244,9 +1283,6 @@ END;
 GO
 
 /* =============================================================================================================== */
-
-/* CODE BỞI TRẦN GIA BẢO */
-
 CREATE TRIGGER dbo.TRG_SanPham_TuDongDongBoChiNhanh
 ON dbo.SanPham
 AFTER INSERT
@@ -1366,127 +1402,6 @@ GO
                                             -- CODE BỞI TRẦN DƯƠNG GIA BẢO --
 
 /* =============================================================================================================== */
-CREATE OR ALTER PROCEDURE dbo.sp_ThemKhachHang
-    @TenKH NVARCHAR(100),
-    @SoDienThoai VARCHAR(20),
-    @MaKH CHAR(6) OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Kiểm tra độ dài tối đa
-    IF LEN(@SoDienThoai) > 10
-    BEGIN
-        RAISERROR(N'Số điện thoại không hợp lệ, tối đa 10 số.', 16, 1);
-        RETURN;
-    END;
-
-    -- Kiểm tra định dạng số điện thoại (Chỉ nhận đúng 10 số di động VN bắt đầu bằng 03, 05, 07, 08, 09 và không chứa ký tự đặc biệt)
-    IF @SoDienThoai NOT LIKE '0[35789]%' OR @SoDienThoai LIKE '%[^0-9]%' OR LEN(@SoDienThoai) <> 10
-    BEGIN
-        RAISERROR(N'Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 số di động Việt Nam (đầu số 03, 05, 07, 08, 09) và không chứa ký tự đặc biệt.', 16, 1);
-        RETURN;
-    END;
-    
-    -- Kiểm tra trùng số điện thoại
-    IF EXISTS (SELECT 1 FROM dbo.KhachHang WHERE SoDienThoai = @SoDienThoai)
-    BEGIN
-        RAISERROR(N'Số điện thoại này đã được đăng ký cho khách hàng khác.', 16, 1);
-        RETURN;
-    END;
-
-    -- Tự động sinh mã khách hàng dạng KH0001, KH0002...
-    DECLARE @MaxID INT = 0;
-    SELECT @MaxID = ISNULL(MAX(CAST(SUBSTRING(MaKH, 3, 4) AS INT)), 0)
-    FROM dbo.KhachHang
-    WHERE MaKH LIKE 'KH%';
-
-    SET @MaxID = @MaxID + 1;
-    SET @MaKH = 'KH' + RIGHT('0000' + CAST(@MaxID AS VARCHAR(4)), 4);
-
-    INSERT INTO dbo.KhachHang (MaKH, TenKH, SoDienThoai, DiemTichLuy)
-    VALUES (@MaKH, @TenKH, @SoDienThoai, 0);
-END;
-GO
-
--- Trần Dương Gia Bảo code phần này
-CREATE OR ALTER PROCEDURE dbo.sp_SuaKhachHang
-    @MaKH CHAR(6),
-    @TenKH NVARCHAR(100),
-    @SoDienThoai VARCHAR(20)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Kiểm tra khách hàng tồn tại
-    IF NOT EXISTS (SELECT 1 FROM dbo.KhachHang WHERE MaKH = @MaKH)
-    BEGIN
-        RAISERROR(N'Khách hàng không tồn tại.', 16, 1);
-        RETURN;
-    END;
-    
-    -- Kiểm tra độ dài tối đa
-    IF LEN(@SoDienThoai) > 10
-    BEGIN
-        RAISERROR(N'Số điện thoại không hợp lệ, tối đa 10 số.', 16, 1);
-        RETURN;
-    END;
-
-    -- Kiểm tra định dạng số điện thoại (Chỉ nhận đúng 10 số di động VN bắt đầu bằng 03, 05, 07, 08, 09 và không chứa ký tự đặc biệt)
-    IF @SoDienThoai NOT LIKE '0[35789]%' OR @SoDienThoai LIKE '%[^0-9]%' OR LEN(@SoDienThoai) <> 10
-    BEGIN
-        RAISERROR(N'Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 số di động Việt Nam (đầu số 03, 05, 07, 08, 09) và không chứa ký tự đặc biệt.', 16, 1);
-        RETURN;
-    END;
-    
-    -- Kiểm tra trùng số điện thoại với người khác
-    IF EXISTS (SELECT 1 FROM dbo.KhachHang WHERE SoDienThoai = @SoDienThoai AND MaKH <> @MaKH)
-    BEGIN
-        RAISERROR(N'Số điện thoại này đã được đăng ký cho khách hàng khác.', 16, 1);
-        RETURN;
-    END;
-
-    UPDATE dbo.KhachHang
-    SET TenKH = @TenKH,
-        SoDienThoai = @SoDienThoai
-    WHERE MaKH = @MaKH;
-END;
-GO
-
--- Trần Dương Gia Bảo code phần này
-CREATE OR ALTER PROCEDURE dbo.sp_XoaKhachHang
-    @MaKH CHAR(6)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Kiểm tra khách hàng tồn tại
-    IF NOT EXISTS (SELECT 1 FROM dbo.KhachHang WHERE MaKH = @MaKH)
-    BEGIN
-        RAISERROR(N'Khách hàng không tồn tại.', 16, 1);
-        RETURN;
-    END;
-    
-    -- Kiểm tra ràng buộc khóa ngoại (đã có đơn hàng chưa)
-    IF EXISTS (SELECT 1 FROM dbo.DonHang WHERE MaKH = @MaKH)
-    BEGIN
-        RAISERROR(N'Không thể xóa khách hàng này vì đã có lịch sử đơn hàng.', 16, 1);
-        RETURN;
-    END;
-
-    DELETE FROM dbo.KhachHang WHERE MaKH = @MaKH;
-END;
-GO
-
--- Trần Dương Gia Bảo code phần này
-CREATE TYPE dbo.TVP_ChiTietDonHang AS TABLE
-(
-    MaBienThe CHAR(10) NOT NULL,
-    SoLuong INT NOT NULL
-);
-GO
-
--- Trần Dương Gia Bảo code phần này
 CREATE PROCEDURE dbo.sp_TaoDonHang
     @MaDH CHAR(10),
     @MaChiNhanh CHAR(10),
@@ -1754,6 +1669,7 @@ END;
 GO
 
 /* =============================================================================================================== */
+/*CODE BỞI NGUYỄN NGỌC CHÂU*/
 CREATE PROCEDURE dbo.sp_DongBoSanPhamVaoChiNhanh
     @MaSanPham CHAR(10),
     @GiaBanMacDinh DECIMAL(18,2) = NULL
@@ -1795,6 +1711,8 @@ BEGIN
 END;
 GO
 
+
+/*CODE BỞI NGUYỄN NGỌC CHÂU*/
 CREATE PROCEDURE dbo.sp_DongBoTatCaSanPham
 AS
 BEGIN
@@ -4295,6 +4213,82 @@ FROM dbo.DanhMuc dm
 LEFT JOIN dbo.SanPham sp ON dm.MaDanhMuc = sp.MaDanhMuc
 GROUP BY dm.MaDanhMuc, dm.TenDanhMuc
 ORDER BY dm.MaDanhMuc;
+GO
+
+
+/* ========================= 17. SAO LƯU - PHỤC HỒI ========================= */
+/*
+
+-- Nửa đêm (ví dụ 23h00 hoặc 00h00) Chủ Nhật:
+-- A. FULL BACKUP
+BACKUP DATABASE QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
+WITH INIT
+
+-- 17h hằng ngày: Chạy Differential Backup
+-- B. DIFFERENTIAL BACKUP
+BACKUP DATABASE QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_DIFF.bak'
+WITH DIFFERENTIAL, INIT
+
+-- C. LOG BACKUP
+BACKUP LOG QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_LOG.trn'
+WITH INIT
+
+
+-- D. PHỤC HỒI CSDL
+BACKUP LOG QuanLyChuoiCaPhe
+TO DISK = 'C:\Backup\QuanLyChuoiCaPhe_Tail.trn'
+WITH INIT
+
+RESTORE DATABASE QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_FULL.bak'
+WITH NORECOVERY;
+
+RESTORE DATABASE QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_DIFF.bak'
+WITH NORECOVERY;
+
+RESTORE LOG QuanLyChuoiCaPhe
+FROM DISK = 'C:\Backup\QuanLyChuoiCaPhe_Tail.trn'
+WITH RECOVERY
+*/
+GO
+
+/* ========================= 18. QUẢN TRỊ NGƯỜI DÙNG - PHÂN QUYỀN ========================= */
+/*
+
+USE QuanLyChuoiCaPhe;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_admin')
+    CREATE USER qlcf_admin FOR LOGIN qlcf_admin;
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'qlcf_staff')
+    CREATE USER qlcf_staff FOR LOGIN qlcf_staff;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_quanly')
+    CREATE ROLE role_quanly;
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = 'role_nhanvien')
+    CREATE ROLE role_nhanvien;
+GO
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.DonHang TO role_quanly;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ChiTietDonHang TO role_quanly;
+GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_quanly;
+GRANT SELECT ON dbo.vw_BangLuongTongHop TO role_quanly;
+GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_quanly;
+GRANT EXECUTE ON dbo.sp_GhiNhanGiaoDichKho TO role_quanly;
+
+GRANT SELECT, INSERT ON dbo.DonHang TO role_nhanvien;
+GRANT SELECT, INSERT ON dbo.ChiTietDonHang TO role_nhanvien;
+GRANT SELECT, INSERT, UPDATE ON dbo.KhachHang TO role_nhanvien;
+GRANT EXECUTE ON dbo.sp_TaoDonHang TO role_nhanvien;
+
+ALTER ROLE role_quanly ADD MEMBER qlcf_admin;
+ALTER ROLE role_nhanvien ADD MEMBER qlcf_staff;
+*/
 GO
 
 
