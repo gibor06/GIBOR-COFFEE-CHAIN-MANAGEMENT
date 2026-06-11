@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace QuanLyChuoiCaPhe.Web.Models
 {
@@ -22,5 +23,8 @@ namespace QuanLyChuoiCaPhe.Web.Models
         public TimeSpan GioBatDau { get; set; }
         
         public TimeSpan GioKetThuc { get; set; }
+
+        [ValidateNever]
+        public virtual ICollection<LichPhanCong> LichPhanCongs { get; set; } = new List<LichPhanCong>();
     }
 }

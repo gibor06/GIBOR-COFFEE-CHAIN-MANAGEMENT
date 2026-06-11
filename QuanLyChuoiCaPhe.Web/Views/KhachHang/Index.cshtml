@@ -1,0 +1,207 @@
+@model IEnumerable<QuanLyChuoiCaPhe.Web.Models.KhachHang>
+@{
+    ViewData["Title"] = "Quản lý Khách hàng";
+    var vaiTro = Context.Session.GetString("VaiTro");
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-people-fill text-coffee"></i> Quản lý Khách hàng</h2>
+        <button type="button" class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-circle"></i> Thêm khách hàng mới
+        </button>
+    </div>
+
+    <!-- Card thống kê -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card bg-coffee text-white">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Tổng số khách hàng</h6>
+                        <h3 class="mb-0">@ViewBag.TongSoKH</h3>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form lọc và tìm kiếm -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Tìm theo mã khách hàng, tên, số điện thoại..." value="@ViewBag.Search" />
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng dữ liệu -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã KH</th>
+                            <th>Tên Khách Hàng</th>
+                            <th>Số Điện Thoại</th>
+                            <th>Điểm Tích Lũy</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td><strong>@item.MaKH</strong></td>
+                                <td>@item.TenKH</td>
+                                <td>@item.SoDienThoai</td>
+                                <td>
+                                    <span class="badge bg-success fs-6">@item.DiemTichLuy đ</span>
+                                </td>
+                                <td>
+                                    <!-- Nút Sửa -->
+                                    <button type="button" class="btn btn-sm btn-primary" 
+                                            onclick="openEditModal('@item.MaKH', '@item.TenKH', '@item.SoDienThoai')" 
+                                            title="Sửa thông tin">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+                                    {
+
+
+                                        <!-- Nút xóa -->
+                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                onclick="xoaKhachHang('@item.MaKH')" 
+                                                title="Xóa khách hàng">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu khách hàng.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Khách Hàng -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Create" method="post">
+                <div class="modal-header bg-coffee text-white">
+                    <h5 class="modal-title" id="createModalLabel"><i class="bi bi-person-plus"></i> Thêm Khách Hàng Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="createTenKH" class="form-label">Tên khách hàng <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="createTenKH" name="tenKH" required placeholder="Nhập tên khách hàng" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="createSDT" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="createSDT" name="soDienThoai" required placeholder="Nhập số điện thoại" />
+                        <div class="form-text">Số điện thoại phải gồm đúng 10 số và chỉ chứa ký tự số.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-coffee">Lưu lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Khách Hàng -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" id="editMaKH" name="maKH" />
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editModalLabel"><i class="bi bi-pencil-square"></i> Cập nhật thông tin Khách Hàng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editTenKH" class="form-label">Tên khách hàng <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editTenKH" name="tenKH" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSDT" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editSDT" name="soDienThoai" required />
+                        <div class="form-text">Số điện thoại phải gồm đúng 10 số và chỉ chứa ký tự số.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    <script>
+        function openEditModal(maKH, tenKH, soDienThoai) {
+            document.getElementById('editMaKH').value = maKH;
+            document.getElementById('editTenKH').value = tenKH;
+            document.getElementById('editSDT').value = soDienThoai;
+            var editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
+        }
+
+
+
+        function xoaKhachHang(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa khách hàng này? Thao tác này không thể hoàn tác!')) {
+                fetch('/KhachHang/Delete?id=' + encodeURIComponent(id), {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    showToast('Đã xảy ra lỗi kết nối!', 'error');
+                });
+            }
+        }
+    </script>
+}

@@ -15,8 +15,11 @@ namespace QuanLyChuoiCaPhe.Web.ViewModels
         [Required(ErrorMessage = "Vui lòng chọn phương thức thanh toán")]
         public string PhuongThucThanhToan { get; set; } = "Tiền mặt";
 
-        [Range(0, double.MaxValue, ErrorMessage = "Giảm giá phải >= 0")]
-        public decimal GiamGia { get; set; } = 0;
+        [Range(0, double.MaxValue, ErrorMessage = "Giảm giá thủ công phải >= 0")]
+        public decimal GiamGiaThuCong { get; set; } = 0;
+
+        [Range(0, int.MaxValue, ErrorMessage = "Điểm sử dụng phải >= 0")]
+        public int DiemSuDung { get; set; } = 0;
 
         public List<ChiTietDonHangItem> ChiTietDonHangs { get; set; } = new List<ChiTietDonHangItem>();
     }

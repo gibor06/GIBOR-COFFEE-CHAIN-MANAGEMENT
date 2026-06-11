@@ -1,0 +1,95 @@
+@model LichPhanCong
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Thêm Lịch phân công";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-plus-circle"></i> Thêm Lịch phân công</h2>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <strong>Có lỗi xảy ra:</strong>
+                    <ul class="mb-0">
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <form asp-action="Create" method="post" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="MaNV" class="form-label">Nhân viên <span class="text-danger">*</span></label>
+                        <select asp-for="MaNV" class="form-select" required>
+                            <option value="">-- Chọn nhân viên --</option>
+                            @if (ViewBag.NhanViens != null)
+                            {
+                                @foreach (SelectListItem nv in ViewBag.NhanViens)
+                                {
+                                    <option value="@nv.Value">@nv.Text</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="MaNV" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="MaCa" class="form-label">Ca làm việc <span class="text-danger">*</span></label>
+                        <select asp-for="MaCa" class="form-select" required>
+                            <option value="">-- Chọn ca làm --</option>
+                            @if (ViewBag.CaLamViecs != null)
+                            {
+                                @foreach (SelectListItem ca in ViewBag.CaLamViecs)
+                                {
+                                    <option value="@ca.Value">@ca.Text</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="MaCa" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="NgayLamViec" class="form-label">Ngày làm việc <span class="text-danger">*</span></label>
+                        <input asp-for="NgayLamViec" type="date" class="form-control" required />
+                        <span asp-validation-for="NgayLamViec" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="TrangThai" class="form-label">Trạng thái <span class="text-danger">*</span></label>
+                        <select asp-for="TrangThai" class="form-select" required>
+                            <option value="Đã phân công">Đã phân công</option>
+                            <option value="Hủy ca">Hủy ca</option>
+                            <option value="Nghỉ phép">Nghỉ phép</option>
+                        </select>
+                        <span asp-validation-for="TrangThai" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="GhiChu" class="form-label">Ghi chú</label>
+                        <input asp-for="GhiChu" class="form-control" maxlength="200" />
+                        <span asp-validation-for="GhiChu" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-coffee">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Hủy
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

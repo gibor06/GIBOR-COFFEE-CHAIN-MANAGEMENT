@@ -1,0 +1,119 @@
+@model ChamCong
+@{
+    ViewData["Title"] = "Sửa Chấm công";
+}
+
+<div class="container-fluid p-4">
+    <h2><i class="bi bi-pencil"></i> Sửa Chấm công: @Model.MaChamCong</h2>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Chỉ sửa giờ vào/ra. Hệ thống sẽ tự động tính lại trạng thái, hệ số và lương thực tế.
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <!-- Thông tin chỉ đọc -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Nhân viên</label>
+                    <p>@Model.ThongTinNhanVien?.HoTenNV (@Model.MaNV)</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Lịch phân công</label>
+                    <p>@Model.MaLich</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Ca làm</label>
+                    <p>@Model.LichPhanCong?.CaLamViec?.TenCa</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Ngày làm việc</label>
+                    <p>@Model.LichPhanCong?.NgayLamViec.ToString("dd/MM/yyyy")</p>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Trạng thái hiện tại</label>
+                    <p>
+                        @switch (Model.TrangThai)
+                        {
+                            case "Hợp lệ":
+                                <span class="badge bg-success">Hợp lệ</span>
+                                break;
+                            case "Đi muộn":
+                                <span class="badge bg-danger">Đi muộn</span>
+                                break;
+                            case "Về sớm":
+                                <span class="badge bg-warning text-dark">Về sớm</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">@Model.TrangThai</span>
+                                break;
+                        }
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Hệ số ngày</label>
+                    <p>@Model.HeSoNgay?.ToString("N2")</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Hệ số ca</label>
+                    <p>@Model.HeSoCa?.ToString("N2")</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Lương thực tế</label>
+                    <p class="text-success fw-bold">@(Model.LuongThucTe?.ToString("N0") ?? "0") đ</p>
+                </div>
+            </div>
+
+            <hr />
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger">
+                    <strong>Có lỗi xảy ra:</strong>
+                    <ul class="mb-0">
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <form asp-action="Edit" method="post" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="MaChamCong" />
+                <input type="hidden" asp-for="MaNV" />
+                <input type="hidden" asp-for="MaLich" />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="GioVao" class="form-label">Giờ vào <span class="text-danger">*</span></label>
+                        <input asp-for="GioVao" type="datetime-local" class="form-control" required />
+                        <span asp-validation-for="GioVao" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="GioRa" class="form-label">Giờ ra <span class="text-danger">*</span></label>
+                        <input asp-for="GioRa" type="datetime-local" class="form-control" required />
+                        <span asp-validation-for="GioRa" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-coffee">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Hủy
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

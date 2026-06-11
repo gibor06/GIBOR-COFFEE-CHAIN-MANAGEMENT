@@ -1,4 +1,5 @@
-@model IEnumerable<VwBangLuongTongHop>
+@model IEnumerable<BangLuong>
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "Quản lý Bảng lương";
 }
@@ -8,36 +9,94 @@
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="bi bi-cash-stack"></i> Quản lý Bảng lương</h2>
-        @if (ViewBag.IsAdmin || ViewBag.CurrentVaiTro == "KE_TOAN")
-        {
-            <a asp-action="KhoiTao" class="btn btn-coffee">
-                <i class="bi bi-plus-circle"></i> Khởi tạo lương
-            </a>
-        }
+        <div>
+            @if (ViewBag.IsAdmin || ViewBag.IsKeToan)
+            {
+                <a asp-action="KhoiTao" class="btn btn-outline-primary me-1">
+                    <i class="bi bi-lightning"></i> Khởi tạo lương
+                </a>
+            }
+        </div>
     </div>
 
+    <!-- Card thống kê -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-1">Tổng lương ca</h6>
+                    <h5 class="mb-0">@(((decimal)ViewBag.TongLuongCa).ToString("N0")) đ</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-1">Tổng thưởng</h6>
+                    <h5 class="mb-0">@(((decimal)ViewBag.TongThuong).ToString("N0")) đ</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-1">Tổng khấu trừ</h6>
+                    <h5 class="mb-0">@(((decimal)ViewBag.TongKhauTru).ToString("N0")) đ</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h6 class="card-title mb-1">Tổng thực lãnh</h6>
+                    <h5 class="mb-0">@(((decimal)ViewBag.TongThucLanh).ToString("N0")) đ</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form lọc -->
     <div class="card mb-3">
         <div class="card-body">
             <form method="get" class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <select name="thang" class="form-select">
-                        <option value="">-- Tất cả tháng --</option>
+                        <option value="">-- Tháng --</option>
                         @for (byte i = 1; i <= 12; i++)
                         {
-                            <option value="@i" selected="@(ViewBag.Thang == i)">Tháng @i</option>
+                            <option value="@i" selected="@(ViewBag.Thang != null && (byte)ViewBag.Thang == i)">Tháng @i</option>
                         }
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <select name="nam" class="form-select">
-                        <option value="">-- Tất cả năm --</option>
+                        <option value="">-- Năm --</option>
                         @for (short i = 2024; i <= 2030; i++)
                         {
-                            <option value="@i" selected="@(ViewBag.Nam == i)">Năm @i</option>
+                            <option value="@i" selected="@(ViewBag.Nam != null && (short)ViewBag.Nam == i)">@i</option>
                         }
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <select name="maNV" class="form-select">
+                        <option value="">-- Nhân viên --</option>
+                        @if (ViewBag.NhanViens != null)
+                        {
+                            @foreach (SelectListItem nv in ViewBag.NhanViens)
+                            {
+                                <option value="@nv.Value" selected="@(ViewBag.MaNV == nv.Value)">@nv.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="trangThai" class="form-select">
+                        <option value="">-- Trạng thái --</option>
+                        <option value="Tạm tính" selected="@(ViewBag.TrangThaiFilter == "Tạm tính")">Tạm tính</option>
+                        <option value="Đã thanh toán" selected="@(ViewBag.TrangThaiFilter == "Đã thanh toán")">Đã thanh toán</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i> Lọc
                     </button>
@@ -49,6 +108,7 @@
         </div>
     </div>
 
+    <!-- Bảng -->
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
@@ -57,7 +117,6 @@
                         <tr>
                             <th>Mã NV</th>
                             <th>Nhân viên</th>
-                            <th>Chi nhánh</th>
                             <th>Tháng/Năm</th>
                             <th>Tổng giờ</th>
                             <th>Lương ca</th>
@@ -73,14 +132,13 @@
                         {
                             <tr>
                                 <td>@item.MaNV</td>
-                                <td><strong>@item.HoTenNV</strong></td>
-                                <td>@item.TenChiNhanh</td>
+                                <td><strong>@item.ThongTinNhanVien?.HoTenNV</strong></td>
                                 <td>@item.Thang/@item.Nam</td>
-                                <td>@item.TongGioThucTe?.ToString("N2")</td>
-                                <td>@item.TongLuongCa?.ToString("N0") đ</td>
-                                <td>@item.TongThuong?.ToString("N0") đ</td>
-                                <td class="text-danger">@item.TongKhauTru?.ToString("N0") đ</td>
-                                <td class="text-success"><strong>@item.ThucLanh?.ToString("N0") đ</strong></td>
+                                <td>@item.TongGioThucTe.ToString("N2")</td>
+                                <td>@item.TongLuongCa.ToString("N0") đ</td>
+                                <td>@item.TongThuong.ToString("N0") đ</td>
+                                <td class="text-danger">@item.TongKhauTru.ToString("N0") đ</td>
+                                <td class="text-success"><strong>@(item.ThucLanh?.ToString("N0") ?? "0") đ</strong></td>
                                 <td>
                                     @if (item.TrangThai == "Đã thanh toán")
                                     {
@@ -88,21 +146,37 @@
                                     }
                                     else
                                     {
-                                        <span class="badge bg-warning">Tạm tính</span>
+                                        <span class="badge bg-warning text-dark">Tạm tính</span>
                                     }
                                 </td>
                                 <td>
-                                    @if (item.TrangThai == "Tạm tính" && (ViewBag.IsAdmin || ViewBag.CurrentVaiTro == "KE_TOAN"))
+                                    @if (item.TrangThai == "Tạm tính")
                                     {
-                                        <button type="button" class="btn btn-sm btn-success" onclick="xacNhanThanhToan('@item.MaNV', @item.Thang, @item.Nam)">
-                                            <i class="bi bi-check-circle"></i>
-                                        </button>
+                                        <a asp-action="Edit" asp-route-maNV="@item.MaNV" asp-route-thang="@item.Thang" asp-route-nam="@item.Nam" class="btn btn-sm btn-primary" title="Sửa">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        @if (ViewBag.IsAdmin || ViewBag.IsKeToan)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success" onclick="xacNhanThanhToan('@item.MaNV', @item.Thang, @item.Nam)" title="Xác nhận thanh toán">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="xoaBangLuong('@item.MaNV', @item.Thang, @item.Nam)" title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
                                     }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p>Không có dữ liệu bảng lương.</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -113,6 +187,26 @@
         function xacNhanThanhToan(maNV, thang, nam) {
             if (confirm('Xác nhận đã thanh toán lương cho nhân viên này?')) {
                 fetch('/BangLuong/XacNhanThanhToan?maNV=' + encodeURIComponent(maNV) + '&thang=' + thang + '&nam=' + nam, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+            }
+        }
+
+        function xoaBangLuong(maNV, thang, nam) {
+            if (confirm('Bạn có chắc chắn muốn xóa bảng lương này?')) {
+                fetch('/BangLuong/Delete?maNV=' + encodeURIComponent(maNV) + '&thang=' + thang + '&nam=' + nam, {
                     method: 'POST',
                     headers: {
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value

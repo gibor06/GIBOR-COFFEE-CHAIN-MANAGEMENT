@@ -72,6 +72,13 @@
                     <span>Đơn hàng</span>
                 </a>
             </li>
+
+            <li class="@activeByController("KhachHang")">
+                <a asp-controller="KhachHang" asp-action="Index">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Khách hàng</span>
+                </a>
+            </li>
         }
 
         @if (vaiTro == "NHAN_VIEN" || vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
@@ -80,6 +87,52 @@
                 <a asp-controller="SanPham" asp-action="Menu">
                     <i class="bi bi-menu-button-wide"></i>
                     <span>Menu</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "ADMIN" || vaiTro == "QUAN_LY")
+        {
+            <li class="menu-section">Nhân sự</li>
+            <li class="@activeByController("CaLamViec")">
+                <a asp-controller="CaLamViec" asp-action="Index">
+                    <i class="bi bi-clock"></i>
+                    <span>Ca làm việc</span>
+                </a>
+            </li>
+            <li class="@activeByController("NgayDacBiet")">
+                <a asp-controller="NgayDacBiet" asp-action="Index">
+                    <i class="bi bi-calendar-event"></i>
+                    <span>Ngày đặc biệt</span>
+                </a>
+            </li>
+            <li class="@activeByController("LichPhanCong")">
+                <a asp-controller="LichPhanCong" asp-action="Index">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Lịch phân công</span>
+                </a>
+            </li>
+            <li class="@activeByController("ChamCong")">
+                <a asp-controller="ChamCong" asp-action="Index">
+                    <i class="bi bi-clipboard-check"></i>
+                    <span>Chấm công</span>
+                </a>
+            </li>
+            <li class="@activeByController("PhatDiMuon")">
+                <a asp-controller="PhatDiMuon" asp-action="Index">
+                    <i class="bi bi-exclamation-diamond"></i>
+                    <span>Phạt đi muộn</span>
+                </a>
+            </li>
+        }
+
+        @if (vaiTro == "KE_TOAN")
+        {
+            <li class="menu-section">Nhân sự</li>
+            <li class="@activeByController("PhatDiMuon")">
+                <a asp-controller="PhatDiMuon" asp-action="Index">
+                    <i class="bi bi-exclamation-diamond"></i>
+                    <span>Phạt đi muộn</span>
                 </a>
             </li>
         }
@@ -93,18 +146,21 @@
                     <span>Tồn kho</span>
                 </a>
             </li>
-            <li class="@activeByRoute("Kho", "GiaoDich")">
-                <a asp-controller="Kho" asp-action="GiaoDich">
-                    <i class="bi bi-arrow-left-right"></i>
-                    <span>Giao dịch kho</span>
-                </a>
-            </li>
-            <li class="@activeByRoute("Kho", "KhoiTao")">
-                <a asp-controller="Kho" asp-action="KhoiTao">
-                    <i class="bi bi-plus-circle"></i>
-                    <span>Khởi tạo kho</span>
-                </a>
-            </li>
+            @if (vaiTro == "ADMIN" || vaiTro == "KHO")
+            {
+                <li class="@activeByRoute("Kho", "GiaoDich")">
+                    <a asp-controller="Kho" asp-action="GiaoDich">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Giao dịch kho</span>
+                    </a>
+                </li>
+                <li class="@activeByRoute("Kho", "KhoiTao")">
+                    <a asp-controller="Kho" asp-action="KhoiTao">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Khởi tạo kho</span>
+                    </a>
+                </li>
+            }
             <li class="@activeByRoute("Kho", "CanhBao")">
                 <a asp-controller="Kho" asp-action="CanhBao">
                     <i class="bi bi-exclamation-triangle"></i>

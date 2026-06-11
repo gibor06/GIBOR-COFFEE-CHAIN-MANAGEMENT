@@ -166,7 +166,8 @@ namespace QuanLyChuoiCaPhe.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Lỗi: {ex.InnerException?.Message ?? ex.Message}";
+                var errorMsg = ex.InnerException?.Message ?? ex.Message;
+                TempData["Error"] = $"[Giao dịch thất bại - Hệ thống đã ROLLBACK] Chi tiết lỗi: {errorMsg}. Toàn bộ thao tác tạo đơn hàng và cập nhật điểm tích lũy đã được hủy bỏ để bảo toàn dữ liệu nhất quán.";
                 await PrepareCreateViewBagAsync(model.MaChiNhanh);
                 return View(model);
             }

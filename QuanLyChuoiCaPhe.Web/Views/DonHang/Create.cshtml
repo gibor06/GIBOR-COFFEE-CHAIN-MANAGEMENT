@@ -1,10 +1,13 @@
 @model DonHangCreateViewModel
+@using System.Text.Json
 @{
     ViewData["Title"] = "Tạo Đơn hàng";
-    var sanPhamGroups = (ViewBag.BienThes as List<BienTheSanPham>)
+    var bienThesForView = ViewBag.BienThes as List<BienTheSanPham> ?? new List<BienTheSanPham>();
+    var sanPhamGroups = bienThesForView
         .GroupBy(bt => bt.SanPham)
         .ToList();
     var priceByBienThe = ViewBag.BienThePrices as Dictionary<string, decimal> ?? new Dictionary<string, decimal>();
+    var khachHangInfosJson = JsonSerializer.Serialize(ViewBag.KhachHangInfos ?? Array.Empty<object>());
 }
 
 <style>
@@ -183,29 +186,64 @@
                         <!-- Customer & Payment Info -->
                         <div class="mb-3">
                             <label class="form-label small"><i class="bi bi-person"></i> Khách hàng</label>
-                            <select asp-for="MaKH" class="form-select form-select-sm" asp-items="ViewBag.KhachHangs">
+                            <select asp-for="MaKH" id="maKhachHangSelect" class="form-select form-select-sm" asp-items="ViewBag.KhachHangs">
                                 <option value="">-- Khách vãng lai --</option>
                             </select>
+                        </div>
+
+                        <div class="mb-3" id="khachHangInfo">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered align-middle mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <th class="bg-light small fw-semibold" style="width: 42%;">Khách hàng</th>
+                                            <td class="small" id="khachHangTen">Khách vãng lai</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="bg-light small fw-semibold">Số điện thoại</th>
+                                            <td class="small" id="khachHangSdt">Không áp dụng tích điểm</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="bg-light small fw-semibold">Điểm hiện tại</th>
+                                            <td class="small">
+                                                <strong class="text-success" id="diemHienCo">0</strong>
+                                                <span class="text-muted">điểm</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small"><i class="bi bi-star"></i> Số điểm sử dụng</label>
+                            <div class="input-group input-group-sm">
+                                <input asp-for="DiemSuDung" type="number" class="form-control"
+                                       min="0" id="diemSuDungInput" onchange="tinhTong()" />
+                                <span class="input-group-text">điểm</span>
+                            </div>
+                            <small class="text-muted">1 điểm = 100đ giảm giá, tối đa 10.000đ/đơn</small>
+                            <div class="text-danger small mt-1 d-none" id="diemSuDungError"></div>
+                            <span asp-validation-for="DiemSuDung" class="text-danger d-block"></span>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label small"><i class="bi bi-credit-card"></i> Thanh toán</label>
                             <select asp-for="PhuongThucThanhToan" class="form-select form-select-sm">
-                                <option value="Tiền mặt">💵 Tiền mặt</option>
-                                <option value="Thẻ">💳 Thẻ</option>
-                                <option value="Chuyển khoản">🏦 Chuyển khoản</option>
-                                <option value="QR">📱 QR Code</option>
-                                <option value="Ví điện tử">💰 Ví điện tử</option>
+                                <option value="Tiền mặt">Tiền mặt</option>
+                                <option value="QR">QR Code</option>
+                                <option value="Thẻ">Thẻ</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label small"><i class="bi bi-percent"></i> Giảm giá</label>
+                            <label class="form-label small"><i class="bi bi-percent"></i> Giảm giá thủ công</label>
                             <div class="input-group input-group-sm">
-                                <input asp-for="GiamGia" type="number" class="form-control" 
-                                       value="0" min="0" id="giamGiaInput" onchange="tinhTong()" />
+                                <input asp-for="GiamGiaThuCong" type="number" class="form-control" 
+                                       min="0" id="giamGiaInput" onchange="tinhTong()" />
                                 <span class="input-group-text">đ</span>
                             </div>
+                            <span asp-validation-for="GiamGiaThuCong" class="text-danger d-block"></span>
                         </div>
 
                         <hr />
@@ -216,12 +254,28 @@
                             <strong id="tamTinh">0 đ</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Giảm giá:</span>
-                            <strong class="text-danger" id="giamGiaDisplay">0 đ</strong>
+                            <span class="text-muted">Giảm giá thủ công:</span>
+                            <strong class="text-danger" id="giamGiaThuCongDisplay">0 đ</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Điểm sử dụng:</span>
+                            <strong id="diemSuDungDisplay">0 điểm</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tiền giảm từ điểm:</span>
+                            <strong class="text-danger" id="tienGiamTuDiemDisplay">0 đ</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Tổng giảm giá:</span>
+                            <strong class="text-danger" id="tongGiamGiaDisplay">0 đ</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3 pt-2 border-top">
-                            <h5 class="mb-0">Tổng cộng:</h5>
+                            <h5 class="mb-0">Tổng thanh toán:</h5>
                             <h5 class="mb-0 text-success" id="tongCong">0 đ</h5>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Điểm dự kiến cộng:</span>
+                            <strong class="text-success" id="diemCongDisplay">0 điểm</strong>
                         </div>
 
                         <!-- Action Buttons -->
@@ -263,11 +317,32 @@
     <script>
         let cart = [];
         let currentProduct = null;
+        const khachHangInfos = @Html.Raw(khachHangInfosJson);
+        const khachHangMap = new Map(khachHangInfos.map(kh => [kh.MaKH, kh]));
+        const GIA_TRI_MOI_DIEM = 100;
+        const TIEN_GIAM_TU_DIEM_TOI_DA = 10000;
+        const DIEM_TOI_DA_THEO_DON = Math.floor(TIEN_GIAM_TU_DIEM_TOI_DA / GIA_TRI_MOI_DIEM);
+        const diemSuDungInput = document.getElementById('diemSuDungInput');
+        const diemSuDungError = document.getElementById('diemSuDungError');
+        const maKhachHangSelect = document.getElementById('maKhachHangSelect');
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Page loaded, cart initialized:', cart);
+            updateCustomerInfo();
             renderCart();
+        });
+
+        maKhachHangSelect.addEventListener('change', function() {
+            updateCustomerInfo();
+            tinhTong(true);
+        });
+
+        diemSuDungInput.addEventListener('input', function() {
+            tinhTong(true);
+        });
+        document.getElementById('giamGiaInput').addEventListener('input', function() {
+            tinhTong();
         });
 
         // Search products
@@ -478,14 +553,99 @@
         }
 
         // Calculate total
-        function tinhTong() {
+        function tinhTong(showPointError = false) {
             const tamTinh = cart.reduce((sum, item) => sum + (item.donGia * item.soLuong), 0);
-            const giamGia = parseFloat(document.getElementById('giamGiaInput').value) || 0;
-            const tongCong = Math.max(0, tamTinh - giamGia);
+            const giamGiaInput = document.getElementById('giamGiaInput');
+            const pointState = normalizeDiemSuDung(showPointError);
+            const selectedCustomer = pointState.selectedCustomer;
+            let giamGiaThuCong = parseFloat(giamGiaInput.value) || 0;
+            let diemSuDung = pointState.diemSuDung;
+
+            let tienGiamTuDiem = diemSuDung * GIA_TRI_MOI_DIEM;
+            let tongGiamGia = giamGiaThuCong + tienGiamTuDiem;
+
+            if (tongGiamGia > tamTinh) {
+                const maxGiamGiaThuCong = Math.max(0, tamTinh - tienGiamTuDiem);
+                giamGiaThuCong = maxGiamGiaThuCong;
+                giamGiaInput.value = maxGiamGiaThuCong;
+                tongGiamGia = giamGiaThuCong + tienGiamTuDiem;
+            }
+
+            const tongCong = Math.max(0, tamTinh - tongGiamGia);
+            const diemCong = selectedCustomer ? Math.floor(tongCong / 10000) : 0;
 
             document.getElementById('tamTinh').textContent = formatMoney(tamTinh);
-            document.getElementById('giamGiaDisplay').textContent = formatMoney(giamGia);
+            document.getElementById('giamGiaThuCongDisplay').textContent = formatMoney(giamGiaThuCong);
+            document.getElementById('diemSuDungDisplay').textContent = `${diemSuDung} điểm`;
+            document.getElementById('tienGiamTuDiemDisplay').textContent = formatMoney(tienGiamTuDiem);
+            document.getElementById('tongGiamGiaDisplay').textContent = formatMoney(tongGiamGia);
             document.getElementById('tongCong').textContent = formatMoney(tongCong);
+            document.getElementById('diemCongDisplay').textContent = `${diemCong} điểm`;
+        }
+
+        function normalizeDiemSuDung(showMessage) {
+            const selectedCustomer = khachHangMap.get(maKhachHangSelect.value);
+            const diemHienCo = selectedCustomer ? selectedCustomer.DiemTichLuy : 0;
+            const diemToiDaDuocDung = selectedCustomer ? Math.min(diemHienCo, DIEM_TOI_DA_THEO_DON) : 0;
+            const rawValue = diemSuDungInput.value;
+            let diemSuDung = parseInt(rawValue, 10);
+            let message = '';
+
+            if (Number.isNaN(diemSuDung)) {
+                diemSuDung = 0;
+            }
+
+            if (diemSuDung < 0) {
+                diemSuDung = 0;
+                message = 'Không được nhập điểm âm. Hệ thống đã đưa điểm sử dụng về 0.';
+            } else if (!selectedCustomer && diemSuDung > 0) {
+                diemSuDung = 0;
+                message = 'Khách vãng lai không được sử dụng điểm.';
+            } else if (diemSuDung > diemToiDaDuocDung) {
+                diemSuDung = diemToiDaDuocDung;
+                message = diemHienCo > DIEM_TOI_DA_THEO_DON
+                    ? `Tiền giảm từ điểm tối đa là 10.000đ/đơn. Hệ thống đã lấy tối đa ${DIEM_TOI_DA_THEO_DON} điểm.`
+                    : `Số điểm sử dụng vượt quá điểm hiện có. Hệ thống đã lấy tối đa ${diemHienCo} điểm.`;
+            }
+
+            if (rawValue !== diemSuDung.toString()) {
+                diemSuDungInput.value = diemSuDung;
+            }
+
+            setDiemSuDungError(message);
+            if (showMessage && message) {
+                showToast(message, 'error');
+            }
+
+            return {
+                selectedCustomer,
+                diemHienCo,
+                diemSuDung
+            };
+        }
+
+        function setDiemSuDungError(message) {
+            diemSuDungError.textContent = message;
+            diemSuDungError.classList.toggle('d-none', !message);
+        }
+
+        function updateCustomerInfo() {
+            const selectedCustomer = khachHangMap.get(maKhachHangSelect.value);
+
+            if (!selectedCustomer) {
+                document.getElementById('khachHangTen').textContent = 'Khách vãng lai';
+                document.getElementById('khachHangSdt').textContent = 'Không áp dụng tích điểm';
+                document.getElementById('diemHienCo').textContent = '0';
+                diemSuDungInput.value = 0;
+                diemSuDungInput.disabled = true;
+                setDiemSuDungError('');
+                return;
+            }
+
+            document.getElementById('khachHangTen').textContent = selectedCustomer.TenKH;
+            document.getElementById('khachHangSdt').textContent = selectedCustomer.SoDienThoai;
+            document.getElementById('diemHienCo').textContent = selectedCustomer.DiemTichLuy;
+            diemSuDungInput.disabled = false;
         }
 
         // Format money
@@ -530,6 +690,38 @@
             if (cart.length === 0) {
                 e.preventDefault();
                 showToast('Vui lòng thêm ít nhất một sản phẩm', 'error');
+                return;
+            }
+
+            const tamTinh = cart.reduce((sum, item) => sum + (item.donGia * item.soLuong), 0);
+            const pointState = normalizeDiemSuDung(true);
+            const selectedCustomer = pointState.selectedCustomer;
+            const diemSuDung = pointState.diemSuDung;
+            const giamGiaThuCong = parseFloat(document.getElementById('giamGiaInput').value) || 0;
+            const tienGiamTuDiem = diemSuDung * GIA_TRI_MOI_DIEM;
+            const tongGiamGia = giamGiaThuCong + tienGiamTuDiem;
+
+            if (!selectedCustomer && diemSuDung > 0) {
+                e.preventDefault();
+                showToast('Khách vãng lai không được sử dụng điểm', 'error');
+                return;
+            }
+
+            if (selectedCustomer && diemSuDung > selectedCustomer.DiemTichLuy) {
+                e.preventDefault();
+                showToast('Số điểm sử dụng không được vượt quá điểm hiện có', 'error');
+                return;
+            }
+
+            if (tienGiamTuDiem > TIEN_GIAM_TU_DIEM_TOI_DA) {
+                e.preventDefault();
+                showToast('Tiền giảm từ điểm tối đa là 10.000đ cho mỗi đơn hàng', 'error');
+                return;
+            }
+
+            if (tongGiamGia > tamTinh) {
+                e.preventDefault();
+                showToast('Tổng giảm giá không được vượt quá tạm tính', 'error');
                 return;
             }
 
